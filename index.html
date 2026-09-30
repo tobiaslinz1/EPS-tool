@@ -337,9 +337,10 @@ const DEFAULT_SETUP = {
     ]
   },
   startTemplate: '',
-  calibration: { gridScale: 0.78, gridX: 0, gridY: 0, gridStep: 50, measureW: 40, measureH: 40 }
+  calibration: { gridScale: 0.78, gridX: 0, gridY: 0, gridStep: 50, measureW: 40, measureH: 40 },
+  outerGuides: { extend: 3, width: 2, color: '#30d158', lines: [2,4] }
 };
-const DEFAULT_VIEW = { grid: true, measures: true, ruler: false, hsp: false, cross: false, snap: true, lockLines: false };
+const DEFAULT_VIEW = { grid: true, measures: true, ruler: false, hsp: false, cross: false, outerGuides: false, snap: true, lockLines: false };
 
 function emptyPlate() { return { shapes: [], lines: [], info: { text: '', color: '#ffffff', size: 16, pos: 'top' }, notes: '' }; }
 function defaultLayout() { return { plates: { L: emptyPlate(), R: emptyPlate() }, nextId: 1, sizeProfiles: { enabled:false, active:'', sizes:['S','M','L','XL','XXL'], saved:{ L:{}, R:{} } } }; }
@@ -539,9 +540,9 @@ function shapeSVG(sh, px, ed) {
   return '<g transform="rotate(' + (sh.rot || 0) + ' ' + x + ' ' + y + ')"' + (ed ? ' data-k="s" data-id="' + sh.id + '"' : '') + '>' + b + info + '</g>';
 }
 
-function lineSVG(ln, w, h, px, ed, isSel, view) {
-  const sw = (ln.stroke || 1) * px, c = ln.color, H = ln.type === 'h', p = ln.pos;
-  const co = H ? [0, p, w, p] : [p, 0, p, h];
+function lineSVG(ln, w, h, px, ed, isSel, view, extend) {
+  const sw = (ln.stroke || 1) * px, c = ln.color, H = ln.type === 'h', p = ln.pos, ex=ed?0:Math.max(0,+extend||0);
+  const co = H ? [-ex, p, w+ex, p] : [p, -ex, p, h+ex];
   const L = (stroke, width, extra) => '<line x1="' + co[0] + '" y1="' + co[1] + '" x2="' + co[2] + '" y2="' + co[3] + '" stroke="' + stroke + '" stroke-width="' + width + '"' + (extra || '') + '/>';
   if (!ed) return L(c, sw);
   const locked = ln.locked || view.lockLines;
@@ -554,6 +555,19 @@ function lineSVG(ln, w, h, px, ed, isSel, view) {
   const lx = H ? w - 0.4 : p + 0.4, ly = H ? p - 0.35 : h - 0.5;
   s += '<text x="' + lx + '" y="' + ly + '" font-size="' + (11.5 * px) + '" text-anchor="' + (H ? 'end' : 'start') + '" fill="#fff" font-weight="600">' + fmt(p) + ' cm' + (ln.linkedTo ? ' ⛓' : '') + '</text>';
   return s + '</g>';
+}
+
+function outerGuidesSVG(w,h,su,px){
+  const O=su.outerGuides||{}, ex=Math.max(0,+O.extend||3), sw=Math.max(1,+O.width||2)*px, c=O.color||'#30d158';
+  const vals=(O.lines||[]).map(Number).filter(v=>v>0).sort((a,b)=>a-b);
+  let s='';
+  for(const d of vals){
+    s+='<line x1="'+(-d)+'" y1="'+(-ex)+'" x2="'+(-d)+'" y2="'+(h+ex)+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+(w+d)+'" y1="'+(-ex)+'" x2="'+(w+d)+'" y2="'+(h+ex)+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+(-ex)+'" y1="'+(-d)+'" x2="'+(w+ex)+'" y2="'+(-d)+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+(-ex)+'" y1="'+(h+d)+'" x2="'+(w+ex)+'" y2="'+(h+d)+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
+  }
+  return s;
 }
 
 function selectionSVG(pl, sel, px) {
@@ -591,9 +605,10 @@ function plateSVG(pl, su, view, pid, K, o) {
   if (view.ruler) s += rulerSVG(w, h, su, px);
   if (view.hsp) s += hspSVG(w, h, su, px);
   if (view.cross) s += crossSVG(w, h, su, px);
+  if (view.outerGuides) s += outerGuidesSVG(w,h,su,px);
   if (pl.info && pl.info.text) s += infoSVG(pl.info, w, h);
   for (const sh of pl.shapes) s += shapeSVG(sh, px, ed);
-  for (const ln of pl.lines) s += lineSVG(ln, w, h, px, ed, sel.includes('l' + ln.id), view);
+  for (const ln of pl.lines) s += lineSVG(ln, w, h, px, ed, sel.includes('l' + ln.id), view, (su.outerGuides||{}).extend);
   if (ed || su.outline) {
     const oc = ed ? 'rgba(255,255,255,.22)' : (su.plateFill === 'light' ? 'rgba(0,0,0,.5)' : 'rgba(255,255,255,.5)');
     s += '<rect x="' + (px / 2) + '" y="' + (px / 2) + '" width="' + (w - px) + '" height="' + (h - px) + '" fill="none" stroke="' + oc + '" stroke-width="' + px + '" pointer-events="none"/>';
@@ -806,7 +821,7 @@ function renderGuides() {
   const v = S.view;
   const row = (k, l, sub) => '<div class="sw-row" data-act="view" data-arg="' + k + '"><span>' + l + (sub ? '<small>' + sub + '</small>' : '') + '</span><span class="toggle' + (v[k] ? ' on' : '') + '"></span></div>';
   $('#guidesPop').innerHTML = '<h4>Hilfslinien</h4>' +
-    row('grid', 'Raster') + row('measures', 'Maße', 'Koordinaten: X ab Mitte, Y ab vorderer Kante') + row('ruler', 'Lineal A–G', 'Feste Linien aus den Einstellungen') + row('hsp', 'HSP-Lineal', 'Messlinie ab Hals-Schulter-Punkt') + '<button class="btn sm block" style="margin:6px 0" data-act="pop" data-arg="hspPop">HSP-Optionen direkt anpassen</button>' + row('cross', 'Fadenkreuz') +
+    row('grid', 'Raster') + row('measures', 'Maße', 'Koordinaten: X ab Mitte, Y ab vorderer Kante') + row('ruler', 'Lineal A–G', 'Feste Linien aus den Einstellungen') + row('hsp', 'HSP-Lineal', 'Messlinie ab Hals-Schulter-Punkt') + '<button class="btn sm block" style="margin:6px 0" data-act="pop" data-arg="hspPop">HSP-Optionen direkt anpassen</button>' + row('cross', 'Fadenkreuz') + row('outerGuides','Außenlinien','Parallel zur aktuellen Plattenkante') +
     '<hr>' + row('lockLines', 'Alle Linien sperren', 'Schützt vor versehentlichem Verschieben') +
     '<button class="btn sm block" style="margin-top:8px" data-act="openSettings">Hilfslinien anpassen</button>';
 }
@@ -1248,6 +1263,8 @@ const ACT = {
     if (v === 'true') v = true; else if (v === 'false') v = false; else if (/^-?\d+(\.\d+)?$/.test(v)) v = +v;
     setDeep(setup, path, v); saveSetup(); renderSettings(); renderCanvas(); renderTop();
   },
+  outerGuideAdd(){setup.outerGuides.lines.push(2);saveSetup();renderSettings();renderCanvas();},
+  outerGuideDel(i){setup.outerGuides.lines.splice(+i,1);saveSetup();renderSettings();renderCanvas();},
   rulerAdd() { setup.ruler.lines.push({ label: String.fromCharCode(65 + setup.ruler.lines.length % 26), o: 'h', ref: 'top', dist: 10, len: 20, mirror: false, color: '#ffd60a' }); saveSetup(); renderSettings(); renderCanvas(); },
   rulerDel(i) { setup.ruler.lines.splice(+i, 1); saveSetup(); renderSettings(); renderCanvas(); },
   exportSetup() { download('EPS-Einstellungen.json', { app: 'EPS-Projektion', kind: 'setup', setup }); toast('Einstellungen exportiert'); },
@@ -1380,6 +1397,12 @@ function renderSettings() {
     fld('Deckkraft feine Linien','gridMinorOpacity',0.05,0)+fld('Deckkraft starke Linien','gridMajorOpacity',0.05,0)+'</div></div>';
 
   h += '<div class="card"><h4>Textilrichtung</h4><p class="hint">Wie das Textil auf der Presse liegt. Lineal und HSP-Linie richten sich danach aus.</p>' + segSet('direction', [['up', 'Kragen oben'], ['down', 'Kragen unten']]) + '</div>';
+
+  h += '<div class="card"><h4>Außenlinien / Textilausrichtung</h4><p class="hint">Die Linien liegen immer relativ zur aktuellen Plattengröße. Beim Umrüsten auf eine kleinere Platte rücken sie automatisch mit. H-/V-Hilfslinien dürfen nur um den eingestellten Überstand über die Platte hinausragen.</p>'+
+    '<div class="fg">'+fld('Überstand Hilfslinien (cm)','outerGuides.extend',0.5,0)+fld('Linienstärke (px)','outerGuides.width',1,1)+colorFld('Farbe','outerGuides.color')+'</div>'+
+    '<div class="lab" style="margin-top:12px">Parallele Außenlinien</div>'+
+    '<div id="outerGuideRows">'+(setup.outerGuides.lines||[]).map((v,i)=>'<div class="row" style="margin:6px 0"><input class="inp" type="number" step="0.5" min="0.1" data-set="outerGuides.lines.'+i+'" value="'+v+'"><span>cm außerhalb</span><button class="btn sm danger" data-act="outerGuideDel" data-arg="'+i+'">✕</button></div>').join('')+'</div>'+
+    '<button class="btn sm" data-act="outerGuideAdd">Außenlinie hinzufügen</button></div>';
 
   h += '<div class="card"><h4>HSP-Lineal</h4><p class="hint">Senkrechte Messlinie ab dem Hals-Schulter-Punkt, zum Platzieren von Brust- und Rückenmotiven.</p>' +
     '<div class="lab">Nullpunkt</div><div style="margin-bottom:14px">' + segSet('hsp.placement', [['on', 'Auf der Platte'], ['above', 'Oberhalb der Platte']]) + '</div>' +
