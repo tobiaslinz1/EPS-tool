@@ -269,7 +269,7 @@ body.beamer{background:#000;cursor:none}
 </div>
 
 <input type="file" id="fImg" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
-<input type="file" id="fProj" accept=".json,application/json" hidden>
+<input type="file" id="fProj" accept=".epst,.json,application/json" hidden>
 <input type="file" id="fSetup" accept=".json,application/json" hidden>
 <div class="toast" id="toast"></div>
 
@@ -340,7 +340,7 @@ const DEFAULT_SETUP = {
   calibration: { gridScale: 0.78, gridX: 0, gridY: 0, gridStep: 50, measureW: 40, measureH: 40 },
   outerGuides: { extend: 3, width: 2, color: '#30d158', lines: [2,4] }
 };
-const DEFAULT_VIEW = { grid: true, measures: true, ruler: false, hsp: false, cross: false, outerGuides: false, snap: true, lockLines: false };
+const DEFAULT_VIEW = { grid: true, measures: true, ruler: false, hsp: false, cross: false, outerGuides: false, infoDims: false, snap: true, lockLines: false };
 
 function emptyPlate() { return { shapes: [], lines: [], info: { text: '', color: '#ffffff', size: 16, pos: 'top' }, notes: '' }; }
 function defaultLayout() { return { plates: { L: emptyPlate(), R: emptyPlate() }, nextId: 1, sizeProfiles: { enabled:false, active:'', sizes:['S','M','L','XL','XXL'], saved:{ L:{}, R:{} } } }; }
@@ -570,6 +570,23 @@ function outerGuidesSVG(w,h,su,px){
   return s;
 }
 
+function infoDimsSVG(pl,w,h,px){
+  const c='#ff2d95', sw=Math.max(px,1.5*px), fs=12*px, cx=w/2;
+  let s='<defs><marker id="epsArrow" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto-start-reverse"><path d="M0,0 L6,3 L0,6 z" fill="'+c+'"/></marker></defs>';
+  for(const o of pl.shapes){
+    const x=o.x,y=o.y, top=Math.max(.8,y-o.h/2), xdim=Math.max(.8,Math.min(h-.8,y+o.h/2+1.8));
+    s+='<g pointer-events="none" opacity=".96">';
+    s+='<line x1="'+cx+'" y1="'+xdim+'" x2="'+x+'" y2="'+xdim+'" stroke="'+c+'" stroke-width="'+sw+'" marker-start="url(#epsArrow)" marker-end="url(#epsArrow)"/>';
+    s+='<line x1="'+cx+'" y1="'+(xdim-.7)+'" x2="'+cx+'" y2="'+(xdim+.7)+'" stroke="'+c+'" stroke-width="'+sw+'"/><line x1="'+x+'" y1="'+(xdim-.7)+'" x2="'+x+'" y2="'+(xdim+.7)+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
+    s+='<text x="'+((cx+x)/2)+'" y="'+(xdim-.35)+'" fill="'+c+'" font-size="'+fs+'" text-anchor="middle" font-weight="700">X '+fmt(x-cx)+' cm</text>';
+    s+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+y+'" stroke="'+c+'" stroke-width="'+sw+'" marker-start="url(#epsArrow)" marker-end="url(#epsArrow)"/>';
+    s+='<text x="'+(x+.5)+'" y="'+Math.max(1.2,y/2)+'" fill="'+c+'" font-size="'+fs+'" font-weight="700">Y '+fmt(y)+' cm</text>';
+    s+='<circle cx="'+x+'" cy="'+y+'" r="'+(3*px)+'" fill="'+c+'"/>';
+    s+='</g>';
+  }
+  return s;
+}
+
 function selectionSVG(pl, sel, px) {
   let s = '';
   const single = sel.length === 1;
@@ -608,6 +625,7 @@ function plateSVG(pl, su, view, pid, K, o) {
   if (view.outerGuides) s += outerGuidesSVG(w,h,su,px);
   if (pl.info && pl.info.text) s += infoSVG(pl.info, w, h);
   for (const sh of pl.shapes) s += shapeSVG(sh, px, ed);
+  if (view.infoDims) s += infoDimsSVG(pl,w,h,px);
   for (const ln of pl.lines) s += lineSVG(ln, w, h, px, ed, sel.includes('l' + ln.id), view, (su.outerGuides||{}).extend);
   if (ed || su.outline) {
     const oc = ed ? 'rgba(255,255,255,.22)' : (su.plateFill === 'light' ? 'rgba(0,0,0,.5)' : 'rgba(255,255,255,.5)');
@@ -780,6 +798,7 @@ function renderTop() {
     '<button class="btn sm" data-act="pop" data-arg="platePop">' + fmt(dims().w) + ' × ' + fmt(dims().h) + ' cm&nbsp; ⚙︎</button>' +
     (S.layout.sizeProfiles && S.layout.sizeProfiles.enabled && S.layout.sizeProfiles.active ? '<button class="btn sm on" data-act="pop" data-arg="sizesPop">Größe ' + esc(S.layout.sizeProfiles.active) + '</button>' : '<button class="btn sm" data-act="pop" data-arg="sizesPop">Größen</button>') +
     '<div class="spacer"></div>' +
+    '<button class="iconbtn' + (S.view.infoDims ? ' on' : '') + '" data-act="view" data-arg="infoDims" title="Info-Ansicht: Objektmaße anzeigen" aria-label="Info-Ansicht"><b style="font-family:serif">i</b></button>' +
     '<button class="iconbtn" data-act="undo" ' + (S.hi <= 0 ? 'disabled' : '') + ' title="Rückgängig (Strg+Z)" aria-label="Rückgängig">↩</button>' +
     '<button class="iconbtn" data-act="redo" ' + (S.hi >= S.history.length - 1 ? 'disabled' : '') + ' title="Wiederholen (Strg+Y)" aria-label="Wiederholen">↪</button>' +
     '<button class="iconbtn" data-act="pop" data-arg="morePop" title="Mehr" aria-label="Mehr">•••</button>' +
@@ -790,7 +809,7 @@ function renderMore() {
   $('#morePop').innerHTML =
     '<button data-act="openCalib">Kalibrieren</button><button data-act="openSettings">Einstellungen</button><hr>' +
     (two ? '<button data-act="copyPlate">' + (S.plate === 'L' ? 'Auf rechte Platte kopieren' : 'Auf linke Platte kopieren') + '</button>' : '') +
-    '<button data-act="saveProject">Projekt speichern</button><button data-act="loadProject">Projekt laden</button><hr>' +
+    '<button data-act="saveProject">Template lokal speichern (.epst)</button><button data-act="loadProject">Template-Datei laden (.epst)</button><hr>' +
     '<button class="danger" data-act="clearPlate">Platte leeren</button>';
 }
 const UI = {
@@ -1245,9 +1264,11 @@ const ACT = {
   },
   tplStart(n) { setup.startTemplate = setup.startTemplate === n ? '' : n; saveSetup(); renderTplPop(); toast(setup.startTemplate ? 'Startet ab jetzt mit „' + n + '“' : 'Startvorlage entfernt'); },
   saveProject() {
-    const data = { app: 'EPS-Projektion', version: '5.0', layout: S.layout, plates: { L: { w: setup.plates.L.w, h: setup.plates.L.h }, R: { w: setup.plates.R.w, h: setup.plates.R.h } } };
-    download('EPS-Projekt-' + new Date().toISOString().slice(0, 10) + '.json', data);
-    toast('Projekt gespeichert');
+    const safeSetup={direction:setup.direction,gridSize:setup.gridSize,gridColor:setup.gridColor,gridMajor:setup.gridMajor,gridLabelEvery:setup.gridLabelEvery,gridDecimals:setup.gridDecimals,gridFont:setup.gridFont,gridLabelColor:setup.gridLabelColor,gridMinorOpacity:setup.gridMinorOpacity,gridMajorOpacity:setup.gridMajorOpacity,hsp:clone(setup.hsp),cross:clone(setup.cross),ruler:clone(setup.ruler),outerGuides:clone(setup.outerGuides)};
+    const data={app:'EPS-Projektion',kind:'template',format:'EPST',version:'1.0',savedAt:new Date().toISOString(),layout:clone(S.layout),plates:{L:{w:setup.plates.L.w,h:setup.plates.L.h},R:{w:setup.plates.R.w,h:setup.plates.R.h}},templateSetup:safeSetup,preview:{infoDims:true,note:'Info-Ansicht mit X ab Plattenmitte und Y ab oberer Plattenkante'}};
+    const name=(P().info&&P().info.text?P().info.text.split('\n')[0]:'EPS-Template').replace(/[^a-z0-9äöüß_-]+/gi,'-').replace(/^-+|-+$/g,'')||'EPS-Template';
+    download(name+'.epst',data,'application/x-epst');
+    toast('EPST-Template lokal gespeichert');
   },
   loadProject() { $('#fProj').click(); },
   clearPlate() {
@@ -1352,8 +1373,8 @@ function normalizePlates() {
   const L = setup.plates.L, R = setup.plates.R;
   R.x = r2((+L.x || 0) + (+L.w || 0) + (+setup.gap || 0));
 }
-function download(name, obj) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+function download(name, obj, mime) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: mime || 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -1699,22 +1720,18 @@ function bindGlobal() {
   document.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.grp) S.open[d.dataset.grp] = d.open; }, true);
   $('#fImg').addEventListener('change', e => { readImage(e.target.files[0]); e.target.value = ''; });
   $('#fProj').addEventListener('change', e => {
-    const f = e.target.files[0]; if (!f) return;
-    const rd = new FileReader();
-    rd.onload = () => {
-      try {
-        const d = JSON.parse(rd.result);
-        if (d.layout) {
-          S.layout = normLayout(d.layout);
-          if (d.plates) for (const p of ['L', 'R']) if (d.plates[p]) { setup.plates[p].w = d.plates[p].w; setup.plates[p].h = d.plates[p].h; }
-        } else if (d.shapes || d.lines) {
-          const r = fromV4(d); S.layout = r.layout; setup.plates.L.w = r.size.w; setup.plates.L.h = r.size.h;
-        } else throw new Error('Kein EPS-Projekt');
-        normalizePlates(); saveSetup(); S.sel = []; S.plate = 'L';
-        commit(); renderAll(); toast('Projekt geladen');
-      } catch (err) { toast('Datei ist kein gültiges EPS-Projekt'); }
+    const f=e.target.files[0]; if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      try{
+        const d=JSON.parse(rd.result); if(!d.layout)throw 0;
+        S.layout=normLayout(d.layout); S.sel=[];
+        if(d.plates){for(const p of ['L','R'])if(d.plates[p]){setup.plates[p].w=+d.plates[p].w||setup.plates[p].w;setup.plates[p].h=+d.plates[p].h||setup.plates[p].h;setup.plates[p].corners=null;}}
+        if(d.templateSetup) setup=deepMerge(setup,d.templateSetup);
+        normalizePlates(); saveSetup(); commit(); renderAll(); toast((d.format==='EPST'?'EPST-Template':'Projekt')+' geladen');
+      }catch(err){toast('Keine gültige EPST-/Projektdatei');}
     };
-    rd.readAsText(f); e.target.value = '';
+    rd.readAsText(f); e.target.value='';
   });
   $('#fSetup').addEventListener('change', e => {
     const f = e.target.files[0]; if (!f) return;
@@ -1736,6 +1753,7 @@ function bindGlobal() {
     }
     if (e.target.id === 'tplName' && e.key === 'Enter') { e.preventDefault(); ACT.tplSave(); return; }
     if (typing) return;
+    if (e.key.toLowerCase() === 'i') { e.preventDefault(); ACT.view('infoDims'); return; }
     if (e.key === 'Escape') { if ($('#calib').classList.contains('open')) ACT.closeCalib(); else if ($('#settings').classList.contains('open')) ACT.closeSettings(); else ACT.deselect(); return; }
     if ((e.key === 'Delete' || e.key === 'Backspace') && S.sel.length) { e.preventDefault(); ACT.del(); return; }
     const m = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
