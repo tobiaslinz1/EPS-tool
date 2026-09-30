@@ -321,7 +321,7 @@ const DEFAULT_SETUP = {
     R: { w: 40, h: 50, x: 120, y: 30, corners: null, offsetX: 0, offsetY: 0, offsetRot: 0 }
   },
   bg: '#000000', plateFill: 'dark', outline: true,
-  gridSize: 1, gridColor: '#ffffff',
+  gridSize: 1, gridColor: '#ffffff', gridMajor: 5, gridLabelEvery: 5, gridDecimals: 0, gridFont: 10, gridLabelColor: '#ffffff', gridMinorOpacity: 0.10, gridMajorOpacity: 0.26,
   direction: 'up',
   hsp: { placement: 'on', x: 0, start: 2, length: 30, tick: 1, color: '#ff2d55', font: 12, width: 2 },
   cross: { x: 0, y: 0, inner: 5, arm: 12, raster: 1, width: 2, font: 12, c1: '#ff2d55', c2: '#ffd60a', c3: '#30d158', c4: '#ff3b30' },
@@ -342,7 +342,7 @@ const DEFAULT_SETUP = {
 const DEFAULT_VIEW = { grid: true, measures: true, ruler: false, hsp: false, cross: false, snap: true, lockLines: false };
 
 function emptyPlate() { return { shapes: [], lines: [], info: { text: '', color: '#ffffff', size: 16, pos: 'top' }, notes: '' }; }
-function defaultLayout() { return { plates: { L: emptyPlate(), R: emptyPlate() }, nextId: 1, sizeProfiles: { enabled:false, active:'M', sizes:['S','M','L','XL','XXL'], base:'S', start:10, increment:1 } }; }
+function defaultLayout() { return { plates: { L: emptyPlate(), R: emptyPlate() }, nextId: 1, sizeProfiles: { enabled:false, active:'', sizes:['S','M','L','XL','XXL'], saved:{ L:{}, R:{} } } }; }
 
 function normShape(s) {
   return Object.assign({ name: '', x: 20, y: 25, w: 6, h: 6, rot: 0, stroke: 1, radius: 0, color: COLORS[0], locked: false, lockRatio: true, info: '', showInfo: true }, s);
@@ -367,7 +367,7 @@ function normLayout(L) {
   let max = 0;
   for (const p of ['L', 'R']) for (const o of [...out.plates[p].shapes, ...out.plates[p].lines]) max = Math.max(max, o.id || 0);
   out.nextId = Math.max(L.nextId || 1, max + 1);
-  out.sizeProfiles = Object.assign(out.sizeProfiles, L.sizeProfiles || {});
+  out.sizeProfiles = Object.assign(out.sizeProfiles, L.sizeProfiles || {}); out.sizeProfiles.saved = deepMerge({L:{},R:{}}, (L.sizeProfiles||{}).saved||{});
   return out;
 }
 /* Import alter v4-Projekte */
@@ -440,16 +440,15 @@ function hexA(hex, a) {
 }
 
 function gridSVG(w, h, su, px, ed, measures) {
-  const g = Math.max(0.1, +su.gridSize || 1);
-  let mi = '', ma = '', lab = '';
-  const isMajor = v => Math.abs(v / 5 - Math.round(v / 5)) < 1e-6;
-  for (let i = 1; i * g < w - 1e-6; i++) { const x = r2(i * g); if (isMajor(x)) { ma += 'M' + x + ' 0V' + h; if (ed && measures) lab += '<text x="' + x + '" y="' + (1.1) + '" font-size="' + (10 * px) + '" text-anchor="middle" fill="rgba(255,255,255,.55)">' + fmt(x-w/2) + '</text>'; } else mi += 'M' + x + ' 0V' + h; }
-  for (let i = 1; i * g < h - 1e-6; i++) { const y = r2(i * g); if (isMajor(y)) { ma += 'M0 ' + y + 'H' + w; if (ed && measures) lab += '<text x="' + (0.4) + '" y="' + y + '" font-size="' + (10 * px) + '" dominant-baseline="middle" fill="rgba(255,255,255,.55)">' + fmt(h-y) + '</text>'; } else mi += 'M0 ' + y + 'H' + w; }
-  const c = su.gridColor || '#ffffff';
-  return '<path d="' + mi + '" stroke="' + hexA(c, .10) + '" stroke-width="' + px + '" fill="none"/>' +
-         '<path d="' + ma + '" stroke="' + hexA(c, .26) + '" stroke-width="' + px + '" fill="none"/>' + lab;
+  const g=Math.max(.1,+su.gridSize||1), major=Math.max(g,+su.gridMajor||5), every=Math.max(g,+su.gridLabelEvery||5);
+  const dec=clamp(Math.round(+su.gridDecimals||0),0,2), fs=Math.max(6,+su.gridFont||10)*px, lc=su.gridLabelColor||'#fff';
+  let mi='',ma='',lab='';
+  const mult=(v,s)=>Math.abs(v/s-Math.round(v/s))<1e-6, num=v=>(+v).toFixed(dec).replace('.',',');
+  for(let i=1;i*g<w-1e-6;i++){const x=r2(i*g), xc=x-w/2, M=mult(x,major);(M?ma+= 'M'+x+' 0V'+h:mi+='M'+x+' 0V'+h);if(ed&&measures&&mult(Math.abs(xc),every))lab+='<text x="'+x+'" y="'+(fs/px*0.12+0.5)+'" font-size="'+fs+'" text-anchor="middle" fill="'+lc+'">'+num(xc)+'</text>';}
+  for(let i=1;i*g<h-1e-6;i++){const y=r2(i*g), yc=h-y, M=mult(y,major);(M?ma+='M0 '+y+'H'+w:mi+='M0 '+y+'H'+w);if(ed&&measures&&mult(yc,every))lab+='<text x="0.4" y="'+y+'" font-size="'+fs+'" dominant-baseline="middle" fill="'+lc+'">'+num(yc)+'</text>';}
+  const gc=su.gridColor||'#fff';
+  return '<path d="'+mi+'" stroke="'+hexA(gc,+su.gridMinorOpacity||.10)+'" stroke-width="'+px+'" fill="none"/><path d="'+ma+'" stroke="'+hexA(gc,+su.gridMajorOpacity||.26)+'" stroke-width="'+px+'" fill="none"/>'+lab;
 }
-
 function rulerSVG(w, h, su, px) {
   const R = su.ruler || {}, sw = (R.width || 2) * px, fs = (R.font || 14) / 10;
   let s = '';
@@ -764,7 +763,7 @@ function renderTop() {
     '<div class="brand"><div class="logo"><svg width="18" height="18" viewBox="0 0 18 18"><rect x="2.5" y="2.5" width="13" height="13" rx="1.5" fill="none" stroke="#fff" stroke-width="1.4"/><line x1="9" y1="0.5" x2="9" y2="17.5" stroke="#ff2d55" stroke-width="1.4"/><line x1="0.5" y1="9" x2="17.5" y2="9" stroke="#64d2ff" stroke-width="1.4"/></svg></div><div><b>EPS Projektion</b></div></div>' +
     (two ? '<div class="seg"><button class="' + (S.plate === 'L' ? 'on' : '') + '" data-act="plate" data-arg="L">Links</button><button class="' + (S.plate === 'R' ? 'on' : '') + '" data-act="plate" data-arg="R">Rechts</button></div>' : '') +
     '<button class="btn sm" data-act="pop" data-arg="platePop">' + fmt(dims().w) + ' × ' + fmt(dims().h) + ' cm&nbsp; ⚙︎</button>' +
-    (S.layout.sizeProfiles && S.layout.sizeProfiles.enabled ? '<button class="btn sm on" data-act="pop" data-arg="sizesPop">Größe ' + esc(S.layout.sizeProfiles.active) + '</button>' : '<button class="btn sm" data-act="pop" data-arg="sizesPop">Größen</button>') +
+    (S.layout.sizeProfiles && S.layout.sizeProfiles.enabled && S.layout.sizeProfiles.active ? '<button class="btn sm on" data-act="pop" data-arg="sizesPop">Größe ' + esc(S.layout.sizeProfiles.active) + '</button>' : '<button class="btn sm" data-act="pop" data-arg="sizesPop">Größen</button>') +
     '<div class="spacer"></div>' +
     '<button class="iconbtn" data-act="undo" ' + (S.hi <= 0 ? 'disabled' : '') + ' title="Rückgängig (Strg+Z)" aria-label="Rückgängig">↩</button>' +
     '<button class="iconbtn" data-act="redo" ' + (S.hi >= S.history.length - 1 ? 'disabled' : '') + ' title="Wiederholen (Strg+Y)" aria-label="Wiederholen">↪</button>' +
@@ -823,12 +822,12 @@ function renderPlatePop(){
   '<button class="btn sm danger block" style="margin-top:12px" data-act="resetPlateOffset">Offset zurücksetzen</button>';
 }
 function renderSizesPop(){
-  const z=S.layout.sizeProfiles||{}, sizes=z.sizes||['S','M','L','XL','XXL'];
-  $('#sizesPop').innerHTML='<h4>Größenprofil</h4><p class="hint" style="margin-bottom:10px">Im Template gespeichert. Der Wert beschreibt den gewünschten Abstand von der Plattenmitte; du kannst ihn je Größe automatisch staffeln.</p>'+
-  '<label class="chk"><input type="checkbox" data-size-enable '+(z.enabled?'checked':'')+'> Größenmodus aktiv</label>'+
-  '<div class="fg" style="margin-top:12px"><div class="f"><label>Startwert S (cm)</label><input class="inp" type="number" step="0.1" data-size-start value="'+(z.start||10)+'"></div><div class="f"><label>Je Größe + (cm)</label><input class="inp" type="number" step="0.1" data-size-inc value="'+(z.increment||1)+'"></div></div>'+
-  '<div class="seg full" style="margin-top:12px">'+sizes.map((x,i)=>'<button class="'+(z.active===x?'on':'')+'" data-act="sizePick" data-arg="'+x+'">'+x+'<br><small>'+fmt((+z.start||10)+i*(+z.increment||1))+' cm</small></button>').join('')+'</div>'+
-  '<p class="hint" style="margin-top:10px">Die Auswahl wird mit der Vorlage gespeichert. Größenabhängige Linien/Motivpositionen können damit anschließend pro Größe hinterlegt werden.</p>';
+  const z=S.layout.sizeProfiles||{}, sizes=z.sizes||['S','M','L','XL','XXL'], saved=(z.saved&&z.saved[S.plate])||{};
+  $('#sizesPop').innerHTML='<h4>Größenstände · Platte '+(S.plate==='L'?'links':'rechts')+'</h4><p class="hint" style="margin-bottom:10px">Positioniere die Platte wie gewünscht und speichere genau diesen Plattenstand je Größe. Die Größenstände gehören intern zur aktuellen Vorlage.</p>'+
+  '<div class="seg full">'+sizes.map(x=>'<button class="'+(z.active===x?'on':'')+'" data-act="sizeLoad" data-arg="'+x+'">'+x+(saved[x]?'<br><small>gespeichert</small>':'<br><small>leer</small>')+'</button>').join('')+'</div>'+
+  '<div class="row" style="margin-top:12px"><select class="inp" id="sizeSaveSel">'+sizes.map(x=>'<option value="'+x+'">'+x+'</option>').join('')+'</select><button class="btn primary" data-act="sizeSave">Aktuelle Platte speichern</button></div>'+
+  (z.active?'<button class="btn sm danger block" style="margin-top:10px" data-act="sizeDelete" data-arg="'+z.active+'">Stand '+z.active+' löschen</button>':'')+
+  '<p class="hint" style="margin-top:10px">Beim Leeren der Platte werden die gespeicherten Größenstände dieser Platte ebenfalls entfernt.</p>';
 }
 function closePops() { document.querySelectorAll('.pop.open').forEach(p => p.classList.remove('open')); }
 
@@ -1011,6 +1010,7 @@ function inspMulti(sel) {
   if (ln.length === 2 && ln[0].type === ln[1].type) kv += '<div class="kv"><span>Abstand der Linien</span><b>' + fmt(Math.abs(ln[0].pos - ln[1].pos)) + ' cm</b></div>';
   if (kv) h += '<div class="sec">' + kv + '</div>';
   h += moveBlock(false);
+  if(sh.length>=2) h += '<div class="sec"><div class="lab">Symmetrisch von Plattenmitte</div><p class="hint" style="margin-bottom:8px">Links/rechts bewegen sich die markierten Objekte jeweils von der Mitte weg oder zur Mitte. Hoch/runter bewegt alle gemeinsam.</p><div class="steps">'+[0.1,0.5,1,2].map(v=>'<button class="'+(S.step===v?'on':'')+'" data-act="step" data-arg="'+v+'">'+fmt(v)+' cm</button>').join('')+'</div><div class="actions" style="grid-template-columns:repeat(4,1fr);margin-top:8px"><button data-act="radial" data-arg="-1,0"><b>↔</b>zur Mitte</button><button data-act="radial" data-arg="1,0"><b>⇥⇤</b>nach außen</button><button data-act="radial" data-arg="0,-1"><b>↑</b>hoch</button><button data-act="radial" data-arg="0,1"><b>↓</b>runter</button></div></div>';
   h += '<div class="sec"><div class="lab">Farbe für alle</div>' + colorRow('#000000').replace(/<input[^>]*>/, '') + '</div>';
   h += actionsHTML([['deselect', '', '○', 'Aufheben'], ['del', '', '✕', 'Alle löschen', 'danger']]);
   return h;
@@ -1091,7 +1091,7 @@ function setShapeProp(o, k, v) {
 
 /* ---------- Aktionen ---------- */
 const ACT = {
-  plate(a) { if (a === S.plate) return; S.plate = a; S.sel = []; renderAll(); },
+  plate(a) { if (a === S.plate) return; S.plate = a; S.sel = []; if(S.layout.sizeProfiles)S.layout.sizeProfiles.active=''; renderAll(); },
   copyPlate() {
     const from = S.plate, to = from === 'L' ? 'R' : 'L';
     if ((S.layout.plates[to].shapes.length || S.layout.plates[to].lines.length) && !confirm('Inhalt der ' + (to === 'L' ? 'linken' : 'rechten') + ' Platte ersetzen?')) return;
@@ -1237,8 +1237,8 @@ const ACT = {
   loadProject() { $('#fProj').click(); },
   clearPlate() {
     if (!confirm('Alle Objekte und Linien dieser Platte löschen?')) return;
-    const pl = P(); pl.shapes = []; pl.lines = []; S.sel = [];
-    commit(); renderAll(); toast('Platte geleert');
+    const pl = P(); pl.shapes = []; pl.lines = []; S.sel = []; if(S.layout.sizeProfiles){S.layout.sizeProfiles.saved[S.plate]={};S.layout.sizeProfiles.active='';S.layout.sizeProfiles.enabled=false;}
+    commit(); renderAll(); toast('Platte geleert · Größenstände entfernt');
   },
   /* Einstellungen */
   openSettings() { renderSettings(); $('#settings').classList.add('open'); },
@@ -1307,7 +1307,10 @@ const ACT = {
 
 Object.assign(ACT, {
   resetPlateOffset(){ const p=dims(); p.offsetX=0;p.offsetY=0;p.offsetRot=0;p.corners=null;saveSetup();renderAll();renderPlatePop();toast('Platten-Offset zurückgesetzt'); },
-  sizePick(a){ S.layout.sizeProfiles.active=a; commit(); renderTop(); renderSizesPop(); toast('Größe '+a+' aktiv'); },
+  radial(a){ const [out,dy]=a.split(',').map(Number), d=dims(), cx=d.w/2, st=S.step; let any=false; for(const s of selObjs()){if(s.k!=='s'||s.o.locked)continue;if(out){const side=s.o.x<cx?-1:s.o.x>cx?1:0;s.o.x=r2(s.o.x+side*out*st);}if(dy)s.o.y=r2(s.o.y+dy*st);any=true;}if(any){commit();renderCanvas();renderInsp();} },
+  sizeSave(){const z=S.layout.sizeProfiles, size=($('#sizeSaveSel')||{}).value;if(!size)return;z.saved=z.saved||{L:{},R:{}};z.saved[S.plate][size]=clone(P());z.enabled=true;z.active=size;commit();renderTop();renderSizesPop();toast('Platte als '+size+' gespeichert');},
+  sizeLoad(size){const z=S.layout.sizeProfiles, snap=z.saved&&z.saved[S.plate]&&z.saved[S.plate][size];if(!snap)return toast('Für '+size+' ist auf dieser Platte noch nichts gespeichert');S.layout.plates[S.plate]=clone(snap);z.enabled=true;z.active=size;S.sel=[];commit();renderAll();renderSizesPop();toast('Größe '+size+' geladen');},
+  sizeDelete(size){const z=S.layout.sizeProfiles;if(z.saved&&z.saved[S.plate])delete z.saved[S.plate][size];if(z.active===size)z.active='';const any=['L','R'].some(p=>z.saved&&z.saved[p]&&Object.keys(z.saved[p]).length);z.enabled=any;commit();renderTop();renderSizesPop();toast('Größenstand '+size+' gelöscht');},
   pop(id) {
     const el = $('#' + id); if (!el) return;
     const open = !el.classList.contains('open');
@@ -1369,7 +1372,12 @@ function renderSettings() {
     '<input type="color" class="sw" data-set="bg" value="' + setup.bg + '" title="Eigene Farbe"></div>' +
     '<div class="lab">Plattenfläche</div><div style="margin-bottom:14px">' + segSet('plateFill', [['dark', 'Dunkel, nur Linien leuchten'], ['light', 'Hell ausgeleuchtet']]) + '</div>' +
     '<label class="chk" style="margin-bottom:14px"><input type="checkbox" data-set="outline"' + (setup.outline ? ' checked' : '') + '> Plattenrand projizieren</label>' +
-    '<div class="fg"><div class="f"><label>Rasterabstand</label><select class="inp" data-set="gridSize">' + [0.5, 1, 2, 3, 5].map(v => '<option value="' + v + '"' + (+setup.gridSize === v ? ' selected' : '') + '>' + fmt(v) + ' cm</option>').join('') + '</select></div>' + colorFld('Rasterfarbe', 'gridColor') + '</div></div>';
+    '<div class="fg"><div class="f"><label>Rasterabstand</label><select class="inp" data-set="gridSize">' + [0.5,1,2,5].map(v=>'<option value="'+v+'"'+(+setup.gridSize===v?' selected':'')+'>'+fmt(v)+' cm</option>').join('') + '</select></div>'+
+    '<div class="f"><label>Starke Rasterlinie alle</label><select class="inp" data-set="gridMajor">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridMajor===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
+    '<div class="f"><label>Maßzahl anzeigen alle</label><select class="inp" data-set="gridLabelEvery">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridLabelEvery===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
+    '<div class="f"><label>Nachkommastellen</label><select class="inp" data-set="gridDecimals">'+[0,1,2].map(v=>'<option value="'+v+'"'+(+setup.gridDecimals===v?' selected':'')+'>'+v+'</option>').join('')+'</select></div>'+
+    fld('Schriftgröße Maßzahlen','gridFont',1,6)+colorFld('Schriftfarbe Maßzahlen','gridLabelColor')+colorFld('Rasterfarbe','gridColor')+
+    fld('Deckkraft feine Linien','gridMinorOpacity',0.05,0)+fld('Deckkraft starke Linien','gridMajorOpacity',0.05,0)+'</div></div>';
 
   h += '<div class="card"><h4>Textilrichtung</h4><p class="hint">Wie das Textil auf der Presse liegt. Lineal und HSP-Linie richten sich danach aus.</p>' + segSet('direction', [['up', 'Kragen oben'], ['down', 'Kragen unten']]) + '</div>';
 
@@ -1661,9 +1669,6 @@ function bindGlobal() {
   document.addEventListener('change', e => {
     const el = e.target;
     if(el.matches('[data-obj-showinfo]')){const s=one();if(s&&s.k==='s'){s.o.showInfo=el.checked;commit();renderCanvas();}return;}
-    if(el.matches('[data-size-enable]')){S.layout.sizeProfiles.enabled=el.checked;commit();renderTop();renderSizesPop();return;}
-    if(el.matches('[data-size-start]')){S.layout.sizeProfiles.start=+el.value||0;commit();renderSizesPop();return;}
-    if(el.matches('[data-size-inc]')){S.layout.sizeProfiles.increment=+el.value||0;commit();renderSizesPop();return;}
     if (el.dataset.p) propInput(el, true);
     else if (el.dataset.set) setInput(el, true);
     else if (el.dataset.info) infoInput(el, true);
