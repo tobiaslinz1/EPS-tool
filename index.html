@@ -323,8 +323,8 @@ const DEFAULT_SETUP = {
     L: { w: 40, h: 50, x: 40, y: 30, corners: null, offsetX: 0, offsetY: 0, offsetRot: 0 },
     R: { w: 40, h: 50, x: 120, y: 30, corners: null, offsetX: 0, offsetY: 0, offsetRot: 0 }
   },
-  bg: '#000000', plateFill: 'dark', outline: true, frameInset: 3, outputRotation: 0, projectionFont: 'system-ui',
-  gridSize: 1, gridColor: '#ffffff', gridMajor: 5, gridLabelEvery: 5, gridDecimals: 0, gridFont: 10, gridLabelColor: '#ffffff', gridMinorOpacity: 0.10, gridMajorOpacity: 0.26,
+  bg: '#000000', plateFill: 'dark', outline: true, frameInset: 3, outputRotation: 0, projectionFont: 'system-ui', projectionWeight: 600, projectionTextStroke: 0, projectionTextStrokeColor: '#000000', projectionContrast: 1, projectionPixelSnap: false,
+  gridSize: 1, gridColor: '#ffffff', gridMajor: 5, gridLabelEvery: 5, gridDecimals: 0, gridFont: 10, gridLabelColor: '#ffffff', gridLabelSideX: 0.4, gridLabelSideY: 0, gridLabelTopX: 0, gridLabelTopY: 0.5, gridMinorOpacity: 0.10, gridMajorOpacity: 0.26,
   direction: 'up',
   hsp: { placement: 'on', x: 0, start: 2, length: 30, tick: 1, color: '#ff2d55', font: 12, width: 2 },
   cross: { x: 0, y: 0, inner: 5, arm: 12, raster: 1, width: 2, font: 12, c1: '#ff2d55', c2: '#ffd60a', c3: '#30d158', c4: '#ff3b30' },
@@ -458,10 +458,18 @@ function hexA(hex, a) {
 function gridSVG(w, h, su, px, ed, measures) {
   const g=Math.max(.1,+su.gridSize||1), major=Math.max(g,+su.gridMajor||5), every=Math.max(g,+su.gridLabelEvery||5);
   const dec=clamp(Math.round(+su.gridDecimals||0),0,2), fs=Math.max(6,+su.gridFont||10)*px, lc=su.gridLabelColor||'#fff';
+  const sx=+su.gridLabelSideX||0, sy=+su.gridLabelSideY||0, tx=+su.gridLabelTopX||0, ty=+su.gridLabelTopY||0;
+  const snap=v=>(!ed&&su.projectionPixelSnap)?Math.round(v/px)*px:v;
   let mi='',ma='',lab='';
   const mult=(v,s)=>Math.abs(v/s-Math.round(v/s))<1e-6, num=v=>(+v).toFixed(dec).replace('.',',');
-  for(let i=1;i*g<w-1e-6;i++){const x=r2(i*g), xc=x-w/2, M=mult(x,major);(M?ma+= 'M'+x+' 0V'+h:mi+='M'+x+' 0V'+h);if(measures&&mult(Math.abs(xc),every))lab+='<text x="'+x+'" y="'+(fs/px*0.12+0.5)+'" font-size="'+fs+'" text-anchor="middle" fill="'+lc+'">'+num(xc)+'</text>';}
-  for(let i=1;i*g<h-1e-6;i++){const y=r2(i*g), yc=h-y, M=mult(y,major);(M?ma+='M0 '+y+'H'+w:mi+='M0 '+y+'H'+w);if(measures&&mult(yc,every))lab+='<text x="0.4" y="'+y+'" font-size="'+fs+'" dominant-baseline="middle" fill="'+lc+'">'+num(yc)+'</text>';}
+  for(let i=1;i*g<w-1e-6;i++){
+    const x=r2(i*g), xc=x-w/2, M=mult(x,major);(M?ma+='M'+x+' 0V'+h:mi+='M'+x+' 0V'+h);
+    if(measures&&mult(Math.abs(xc),every))lab+='<text x="'+snap(x+tx)+'" y="'+snap(ty)+'" font-size="'+fs+'" text-anchor="middle" dominant-baseline="hanging" fill="'+lc+'">'+num(xc)+'</text>';
+  }
+  for(let i=1;i*g<h-1e-6;i++){
+    const y=r2(i*g), yc=h-y, M=mult(y,major);(M?ma+='M0 '+y+'H'+w:mi+='M0 '+y+'H'+w);
+    if(measures&&mult(yc,every))lab+='<text x="'+snap(sx)+'" y="'+snap(y+sy)+'" font-size="'+fs+'" dominant-baseline="middle" fill="'+lc+'">'+num(yc)+'</text>';
+  }
   const gc=su.gridColor||'#fff';
   return '<path d="'+mi+'" stroke="'+hexA(gc,+su.gridMinorOpacity||.10)+'" stroke-width="'+px+'" fill="none"/><path d="'+ma+'" stroke="'+hexA(gc,+su.gridMajorOpacity||.26)+'" stroke-width="'+px+'" fill="none"/>'+lab;
 }
@@ -630,7 +638,8 @@ function selectionSVG(pl, sel, px) {
 function plateSVG(pl, su, view, pid, K, o) {
   o = o || {};
   const P = su.plates[pid], w = P.w, h = P.h, px = 1 / K, ed = !!o.editor, sel = o.sel || [];
-  let s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (w * K) + '" height="' + (h * K) + '" viewBox="0 0 ' + w + ' ' + h + '" style="overflow:visible;font-family:' + (su.projectionFont||'system-ui') + ';text-rendering:geometricPrecision;shape-rendering:geometricPrecision">';
+  const tw=clamp(+su.projectionWeight||600,300,800),ts=Math.max(0,+su.projectionTextStroke||0)*px,tc=su.projectionTextStrokeColor||'#000';
+  let s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (w * K) + '" height="' + (h * K) + '" viewBox="0 0 ' + w + ' ' + h + '" style="overflow:visible;font-family:' + (su.projectionFont||'system-ui') + ';text-rendering:geometricPrecision;shape-rendering:geometricPrecision"><style>text{font-weight:'+tw+';paint-order:stroke fill;stroke:'+tc+';stroke-width:'+ts+';stroke-linejoin:round}</style>';
   if (ed) s += '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="#2c2c2e" data-bg="1"/>';
   else if (su.plateFill === 'light') s += '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="#ffffff"/>';
   if (view.grid) s += gridSVG(w, h, su, px, ed, view.measures);
@@ -682,6 +691,7 @@ function initBeamer() {
     const view = deepMerge(DEFAULT_VIEW, B.view || {}), layout = normLayout(B.layout);
     document.body.style.background = su.bg;
     stage.style.background = su.bg;
+    stage.style.filter='contrast('+clamp(+su.projectionContrast||1,.7,1.6)+')';
     const rot=((+su.outputRotation||0)%360+360)%360;
     stage.style.transformOrigin='0 0';
     if(rot===90) stage.style.transform='translate('+W+'px,0) rotate(90deg)';
@@ -1532,7 +1542,15 @@ function renderSettings() {
     '<div class="f"><label>Maßzahl anzeigen alle</label><select class="inp" data-set="gridLabelEvery">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridLabelEvery===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
     '<div class="f"><label>Nachkommastellen</label><select class="inp" data-set="gridDecimals">'+[0,1,2].map(v=>'<option value="'+v+'"'+(+setup.gridDecimals===v?' selected':'')+'>'+v+'</option>').join('')+'</select></div>'+
     fld('Schriftgröße Maßzahlen','gridFont',1,6)+colorFld('Schriftfarbe Maßzahlen','gridLabelColor')+colorFld('Rasterfarbe','gridColor')+
-    fld('Deckkraft feine Linien','gridMinorOpacity',0.05,0)+fld('Deckkraft starke Linien','gridMajorOpacity',0.05,0)+'</div></div>';
+    fld('Seitliche Zahlen X (cm)','gridLabelSideX',0.1)+fld('Seitliche Zahlen Y (cm)','gridLabelSideY',0.1)+fld('Obere Zahlen X (cm)','gridLabelTopX',0.1)+fld('Obere Zahlen Y (cm)','gridLabelTopY',0.1)+
+    fld('Deckkraft feine Linien','gridMinorOpacity',0.05,0)+fld('Deckkraft starke Linien','gridMajorOpacity',0.05,0)+'</div><p class="hint" style="margin-top:10px">Seitliche Zahlen: X verschiebt nach rechts/links, Y nach unten/oben. Obere Zahlen: X seitlich, Y nach unten/oben. Negative Y-Werte schieben die oberen Zahlen weiter nach oben.</p></div>';
+
+  h += '<div class="card"><h4>Projektionsqualität</h4><p class="hint">Feinabstimmung für kleine Schrift und dünne Linien auf dem Beamer. Die optische Fokussierung des Beamers bleibt entscheidend.</p>'+
+    '<div class="fg"><div class="f"><label>Schriftgewicht</label><select class="inp" data-set="projectionWeight">'+[[400,'400 Normal'],[500,'500 Medium'],[600,'600 Semibold'],[700,'700 Bold']].map(([v,l])=>'<option value="'+v+'"'+(+setup.projectionWeight===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>'+
+    fld('Textkontur (px)','projectionTextStroke',0.1,0)+colorFld('Textkontur Farbe','projectionTextStrokeColor')+
+    '<div class="f"><label>Kontrast</label><input class="inp" type="number" min="0.7" max="1.6" step="0.05" data-set="projectionContrast" value="'+(+setup.projectionContrast||1)+'"></div></div>'+
+    '<label class="chk" style="margin-top:12px"><input type="checkbox" data-set="projectionPixelSnap"'+(setup.projectionPixelSnap?' checked':'')+'> Maßzahlen pixelgenau ausrichten</label>'+
+    '<p class="hint" style="margin-top:8px">Empfehlung zum Start: Arial oder Verdana, Gewicht 600, Textkontur 0–0,3 px, Kontrast 1,0–1,1. Zu viel Kontur oder Kontrast kann wieder unschärfer wirken.</p></div>';
 
   h += '<div class="card"><h4>Maßanzeigen / Info</h4><p class="hint">Steuert projizierte Positionswerte und die Info-Ansicht.</p>'+
     '<label class="chk" style="margin-bottom:12px"><input type="checkbox" data-set="measureLabels.showLineValues"'+(setup.measureLabels.showLineValues!==false?' checked':'')+'> Werte an H-/V-Linien auf dem Beamer anzeigen</label>'+
@@ -1788,6 +1806,7 @@ function setInput(el, final) {
   saveSetup();
   if ($('#calib').classList.contains('open')) { syncLive(); if (final && (path === 'twoPlates' || path.indexOf('area') === 0)) renderCalib(); }
   renderCanvas();
+  syncLive();
   if (final) {
     if (path.indexOf('ruler.lines') === 0 && /\.o$/.test(path)) { const i = +path.split('.')[2]; const L = setup.ruler.lines[i]; L.ref = L.o === 'h' ? 'top' : 'left'; saveSetup(); renderSettings(); }
     if (path === 'twoPlates' || path.indexOf('plates.') === 0) { renderTop(); if($('#platePop').classList.contains('open')) renderPlatePop(); }
