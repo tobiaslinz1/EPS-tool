@@ -222,6 +222,24 @@ details.grp>.gb{padding-bottom:16px}
 .name{font-size:18px;font-weight:600;border:0;background:transparent;padding:3px 0;width:100%;outline:none;border-bottom:1px solid transparent;letter-spacing:-.2px}
 .name:focus{border-bottom-color:var(--accent)}
 .sub2{font-size:12.5px;color:var(--text2);margin-top:2px}
+.settings-intro{background:linear-gradient(180deg,#fff,var(--fill));border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px}
+.settings-intro b{display:block;font-size:15px;margin-bottom:3px}
+.settings-intro span{font-size:12.5px;color:var(--text2);line-height:1.45}
+.settings-section{background:#fff;border:1px solid var(--line);border-radius:16px;margin-bottom:12px;overflow:hidden}
+.settings-section>summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:650;user-select:none}
+.settings-section>summary::-webkit-details-marker{display:none}
+.settings-section>summary:after{content:'›';margin-left:auto;color:var(--text2);font-size:22px;line-height:1;transform:rotate(90deg);transition:transform .15s}
+.settings-section[open]>summary:after{transform:rotate(-90deg)}
+.settings-section>summary small{display:block;font-size:11.5px;font-weight:450;color:var(--text2);margin-top:2px}
+.settings-section .settings-body{border-top:1px solid var(--line);padding:14px 16px}
+.settings-sub{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 8px}
+.settings-sub:first-child{margin-top:0}
+.settings-note{font-size:12px;color:var(--text2);line-height:1.45;background:var(--fill);border-radius:10px;padding:9px 10px;margin-top:10px}
+.settings-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:8px 0;border-bottom:1px solid var(--line)}
+.settings-toggle:last-child{border-bottom:0}
+.settings-toggle span{font-size:13.5px;font-weight:550}
+.settings-toggle small{display:block;font-size:11.5px;font-weight:400;color:var(--text2);margin-top:2px}
+@media(max-width:760px){.settings-section .fg{grid-template-columns:1fr}.settings-section>summary{padding:13px 14px}.settings-section .settings-body{padding:12px 14px}}
 .insp-title-row{display:flex;align-items:center;gap:8px}
 .insp-title-row .name{flex:1;min-width:0}
 .insp-del{width:34px;height:34px;min-width:34px;border-radius:9px;display:grid;place-items:center;color:var(--red);background:rgba(255,59,48,.07);font-size:16px;touch-action:manipulation}
@@ -613,12 +631,12 @@ function infoDimsSVG(pl,w,h,px,su){
       s+='<line x1="'+cx+'" y1="'+xdim+'" x2="'+x+'" y2="'+xdim+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
       s+='<line x1="'+cx+'" y1="'+(xdim-tick)+'" x2="'+cx+'" y2="'+(xdim+tick)+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
       s+='<line x1="'+x+'" y1="'+(xdim-tick)+'" x2="'+x+'" y2="'+(xdim+tick)+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
-      s+='<text x="'+((cx+x)/2)+'" y="'+(xdim-Math.max(.25,3*px))+'" fill="'+c+'" font-size="'+fs+'" text-anchor="middle" font-weight="600">X '+(xv>0?'+':'')+fmt(xv)+' cm</text>';
+      s+='<text x="'+((cx+x)/2)+'" y="'+(xdim-Math.max(.25,3*px))+'" fill="'+c+'" font-size="'+fs+'" text-anchor="middle" font-weight="600" style="stroke:none">X '+(xv>0?'+':'')+fmt(xv)+' cm</text>';
     }
     s+='<line x1="'+vx+'" y1="'+h+'" x2="'+vx+'" y2="'+y+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
     s+='<line x1="'+(vx-tick)+'" y1="'+h+'" x2="'+(vx+tick)+'" y2="'+h+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
     s+='<line x1="'+(vx-tick)+'" y1="'+y+'" x2="'+(vx+tick)+'" y2="'+y+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
-    s+='<text x="'+(vx+Math.max(.3,4*px))+'" y="'+((h+y)/2)+'" fill="'+c+'" font-size="'+fs+'" dominant-baseline="middle" font-weight="600">Y '+fmt(yv)+' cm</text>';
+    s+='<text x="'+(vx+Math.max(.3,4*px))+'" y="'+((h+y)/2)+'" fill="'+c+'" font-size="'+fs+'" dominant-baseline="middle" font-weight="600" style="stroke:none">Y '+fmt(yv)+' cm</text>';
     s+='</g>';
   }
   return s;
@@ -894,7 +912,7 @@ function renderGuides() {
   const v = S.view;
   const row = (k, l, sub) => '<div class="sw-row" data-act="view" data-arg="' + k + '"><span>' + l + (sub ? '<small>' + sub + '</small>' : '') + '</span><span class="toggle' + (v[k] ? ' on' : '') + '"></span></div>';
   $('#guidesPop').innerHTML = '<h4>Hilfslinien</h4>' +
-    row('grid', 'Raster') + row('measures', 'Maße', 'Koordinaten: X ab Mitte, Y ab vorderer Kante') + row('ruler', 'Lineal A–G', 'Feste Linien aus den Einstellungen') + row('hsp', 'HSP-Lineal', 'Messlinie ab Hals-Schulter-Punkt') + '<button class="btn sm block" style="margin:6px 0" data-act="pop" data-arg="hspPop">HSP-Optionen direkt anpassen</button>' + row('cross', 'Fadenkreuz') + row('outerGuides','Außenlinien','Parallel zur aktuellen Plattenkante') +
+    row('grid', 'Raster') + row('measures', 'Raster-Maße', 'Koordinaten: X ab Mitte, Y ab vorderer Kante') + row('infoDims', 'Info-Bemaßung', 'Feine X-/Y-Maße an den Objekten') + row('ruler', 'Lineal A–G', 'Feste Linien aus den Einstellungen') + row('hsp', 'HSP-Lineal', 'Messlinie ab Hals-Schulter-Punkt') + '<button class="btn sm block" style="margin:6px 0" data-act="pop" data-arg="hspPop">HSP-Optionen direkt anpassen</button>' + row('cross', 'Fadenkreuz') + row('outerGuides','Außenlinien','Parallel zur aktuellen Plattenkante') +
     '<hr>' + row('lockLines', 'Alle Linien sperren', 'Schützt vor versehentlichem Verschieben') +
     '<button class="btn sm block" style="margin-top:8px" data-act="openSettings">Hilfslinien anpassen</button>';
 }
@@ -1326,7 +1344,7 @@ const ACT = {
   view(k) {
     S.view[k] = !S.view[k];
     if (k === 'lockLines') toast(S.view.lockLines ? 'Alle Linien gesperrt' : 'Linien wieder beweglich');
-    persist(); renderDock(); renderCanvas();
+    persist(); renderDock(); renderCanvas(); renderTop(); if ($('#settings').classList.contains('open')) renderSettings();
   },
   multi() { S.multi = !S.multi; renderDock(); toast(S.multi ? 'Mehrfachauswahl: Objekte nacheinander antippen' : 'Mehrfachauswahl aus'); },
   zoom(a) { a = +a; S.zoom = a === 0 ? 1 : clamp(r2(S.zoom + a * 0.25), 0.5, 4); renderDock(); renderCanvas(); },
@@ -1570,72 +1588,90 @@ function segSet(path, opts) {
   const cur = getDeep(setup, path);
   return '<div class="seg">' + opts.map(([v, l]) => '<button class="' + (String(cur) === String(v) ? 'on' : '') + '" data-act="setv" data-arg="' + path + '=' + v + '">' + l + '</button>').join('') + '</div>';
 }
+function settingSection(id,title,sub,body,open){
+  return '<details class="settings-section" data-settings-sec="'+id+'"'+(open?' open':'')+'><summary><div>'+title+(sub?'<small>'+sub+'</small>':'')+'</div></summary><div class="settings-body">'+body+'</div></details>';
+}
+function viewSetting(k,label,sub){
+  return '<button type="button" class="settings-toggle" data-act="view" data-arg="'+k+'"><span>'+label+(sub?'<small>'+sub+'</small>':'')+'</span><span class="toggle'+(S.view[k]?' on':'')+'"></span></button>';
+}
 function renderSettings() {
-  const t = LS.get('eps5-templates', {});
-  let h = '<div class="card"><h4>Beamer-Ausgabe</h4><p class="hint">So sieht die Projektion außerhalb und auf den Platten aus.</p>' +
-    '<div class="lab">Umgebung (außerhalb der Platten)</div><div class="swatches" style="margin-bottom:14px">' +
-    BG_COLORS.map(([c, n]) => '<button class="sw' + (setup.bg === c ? ' on' : '') + '" style="background:' + c + '" title="' + n + '" data-act="setv" data-arg="bg=' + c + '"></button>').join('') +
-    '<input type="color" class="sw" data-set="bg" value="' + setup.bg + '" title="Eigene Farbe"></div>' +
-    '<div class="lab">Plattenfläche</div><div style="margin-bottom:14px">' + segSet('plateFill', [['dark', 'Dunkel, nur Linien leuchten'], ['light', 'Hell ausgeleuchtet']]) + '</div>' +
-    '<label class="chk" style="margin-bottom:14px"><input type="checkbox" data-set="outline"' + (setup.outline ? ' checked' : '') + '> Plattenrand projizieren</label>' +
-    '<div class="fg" style="margin-bottom:14px">'+fld('Rahmen nach innen (mm)','frameInset',0.5,0)+'</div>'+
-    '<div class="lab">Beamerbild drehen</div><div style="margin-bottom:14px">'+segSet('outputRotation', [[0,'0°'],[90,'90°'],[180,'180°'],[270,'270°']])+'</div><p class="hint" style="margin-top:-8px;margin-bottom:14px">Dreht nur die komplette Beamer-Ausgabe. Maßstab und Objektkoordinaten bleiben unverändert.</p>' +
-    '<div class="lab">Schriftart Projektion</div><div style="margin-bottom:14px"><select class="inp" data-set="projectionFont">'+[['system-ui','System / San Francisco'],['Arial','Arial'],['Helvetica','Helvetica'],['Verdana','Verdana'],['Tahoma','Tahoma'],['Georgia','Georgia']].map(([v,l])=>'<option value="'+v+'"'+(setup.projectionFont===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>'+ '<div class="fg"><div class="f"><label>Rasterabstand</label><select class="inp" data-set="gridSize">' + [0.5,1,2,5].map(v=>'<option value="'+v+'"'+(+setup.gridSize===v?' selected':'')+'>'+fmt(v)+' cm</option>').join('') + '</select></div>'+
-    '<div class="f"><label>Starke Rasterlinie alle</label><select class="inp" data-set="gridMajor">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridMajor===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
-    '<div class="f"><label>Maßzahl anzeigen alle</label><select class="inp" data-set="gridLabelEvery">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridLabelEvery===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
-    '<div class="f"><label>Nachkommastellen</label><select class="inp" data-set="gridDecimals">'+[0,1,2].map(v=>'<option value="'+v+'"'+(+setup.gridDecimals===v?' selected':'')+'>'+v+'</option>').join('')+'</select></div>'+
-    quickFld('Schriftgröße Maßzahlen','gridFont',[8,10,12,14,16,18,20],1,6,'')+colorFld('Schriftfarbe Maßzahlen','gridLabelColor')+colorFld('Rasterfarbe','gridColor')+
-    fld('Seitliche Zahlen X (cm)','gridLabelSideX',0.1)+fld('Seitliche Zahlen Y (cm)','gridLabelSideY',0.1)+fld('Obere Zahlen X (cm)','gridLabelTopX',0.1)+fld('Obere Zahlen Y (cm)','gridLabelTopY',0.1)+
-    fld('Deckkraft feine Linien','gridMinorOpacity',0.05,0)+fld('Deckkraft starke Linien','gridMajorOpacity',0.05,0)+'</div><p class="hint" style="margin-top:10px">Seitliche Zahlen: X verschiebt nach rechts/links, Y nach unten/oben. Obere Zahlen: X seitlich, Y nach unten/oben. Negative Y-Werte schieben die oberen Zahlen weiter nach oben.</p></div>';
+  const t=LS.get('eps5-templates',{}), fonts=[['system-ui','System / San Francisco'],['Arial','Arial'],['Helvetica','Helvetica'],['Verdana','Verdana'],['Tahoma','Tahoma'],['Georgia','Georgia']];
+  let h='<div class="settings-intro"><b>Einstellungen</b><span>Die wichtigsten Produktionsoptionen sind oben. Spezialfunktionen sind darunter eingeklappt, damit die Ansicht auf dem Tablet ruhig und übersichtlich bleibt.</span></div>';
 
-  h += '<div class="card"><h4>Projektionsqualität</h4><p class="hint">Feinabstimmung für kleine Schrift und dünne Linien auf dem Beamer. Die optische Fokussierung des Beamers bleibt entscheidend.</p>'+
+  h+=settingSection('projection','Beamer & Darstellung','Hintergrund, Platte, Drehung und Schrift',
+    '<div class="settings-sub">Beamerfläche</div>'+
+    '<div class="lab">Hintergrund</div><div class="swatches" style="margin-bottom:14px">'+BG_COLORS.map(([x,n])=>'<button class="sw'+(setup.bg===x?' on':'')+'" style="background:'+x+'" title="'+n+'" data-act="setv" data-arg="bg='+x+'"></button>').join('')+'<input type="color" class="sw" data-set="bg" value="'+setup.bg+'" title="Eigene Farbe"></div>'+
+    '<div class="lab">Plattenfläche</div>'+segSet('plateFill',[['dark','Dunkel'],['light','Hell']])+
+    '<label class="chk" style="margin:14px 0"><input type="checkbox" data-set="outline"'+(setup.outline?' checked':'')+'> Plattenrand projizieren</label>'+
+    '<div class="fg">'+fld('Rahmen nach innen (mm)','frameInset',0.5,0)+'</div>'+
+    '<div class="settings-sub">Ausrichtung</div><div class="lab">Beamerbild drehen</div>'+segSet('outputRotation',[[0,'0°'],[90,'90°'],[180,'180°'],[270,'270°']])+
+    '<div class="settings-sub">Schrift</div><div class="f"><label>Schriftart Projektion</label><select class="inp" data-set="projectionFont">'+fonts.map(([v,l])=>'<option value="'+v+'"'+(setup.projectionFont===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>',true);
+
+  h+=settingSection('grid','Raster & Raster-Maße','Rasterlinien, Zahlen und Position der Beschriftung',
+    viewSetting('grid','Raster anzeigen','Raster auf Tablet und Beamer')+
+    viewSetting('measures','Raster-Maßzahlen anzeigen','X ab Plattenmitte, Y ab vorderer Kante')+
+    '<div class="settings-sub">Raster</div><div class="fg">'+
+      '<div class="f"><label>Rasterabstand</label><select class="inp" data-set="gridSize">'+[0.5,1,2,5].map(v=>'<option value="'+v+'"'+(+setup.gridSize===v?' selected':'')+'>'+fmt(v)+' cm</option>').join('')+'</select></div>'+
+      '<div class="f"><label>Starke Linie alle</label><select class="inp" data-set="gridMajor">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridMajor===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
+      colorFld('Rasterfarbe','gridColor')+fld('Deckkraft feine Linien','gridMinorOpacity',0.05,0)+fld('Deckkraft starke Linien','gridMajorOpacity',0.05,0)+
+    '</div><div class="settings-sub">Maßzahlen</div><div class="fg">'+
+      '<div class="f"><label>Maßzahl alle</label><select class="inp" data-set="gridLabelEvery">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridLabelEvery===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
+      '<div class="f"><label>Nachkommastellen</label><select class="inp" data-set="gridDecimals">'+[0,1,2].map(v=>'<option value="'+v+'"'+(+setup.gridDecimals===v?' selected':'')+'>'+v+'</option>').join('')+'</select></div>'+
+      quickFld('Schriftgröße','gridFont',[8,10,12,14,16,18,20],1,6,'')+colorFld('Schriftfarbe','gridLabelColor')+
+    '</div><div class="settings-sub">Position der Zahlen</div><div class="fg">'+
+      fld('Seitlich → / ← (cm)','gridLabelSideX',0.1)+fld('Seitlich ↓ / ↑ (cm)','gridLabelSideY',0.1)+fld('Oben → / ← (cm)','gridLabelTopX',0.1)+fld('Oben ↓ / ↑ (cm)','gridLabelTopY',0.1)+
+    '</div><div class="settings-note">Bei den oberen Zahlen verschiebt ein negativer Y-Wert die Beschriftung weiter nach oben. So kannst du Kollisionen mit Außenlinien vermeiden.</div>',true);
+
+  h+=settingSection('lines','H- & V-Linien','Position, Werte und Darstellung der frei gesetzten Linien',
+    viewSetting('lockLines','Alle H-/V-Linien sperren','Schützt vor versehentlichem Verschieben')+
+    '<label class="chk" style="margin:12px 0"><input type="checkbox" data-set="measureLabels.showLineValues"'+(setup.measureLabels.showLineValues!==false?' checked':'')+'> Maßwert direkt an H-/V-Linie anzeigen</label>'+
+    '<div class="fg">'+quickFld('Schriftgröße Maßwert','measureLabels.font',[8,10,12,14,16,18,20,24],1,8,'')+colorFld('Farbe Maßwert','measureLabels.color')+'</div>'+
+    '<div class="settings-note"><b>H-Linie:</b> 0 cm liegt an der körpernahen/vorderen Plattenkante. <b>V-Linie:</b> 0 cm liegt exakt in der Plattenmitte; links negativ, rechts positiv. Position, Farbe und Linienstärke einer einzelnen Linie stellst du direkt ein, sobald du die Linie antippst.</div>',true);
+
+  h+=settingSection('info','Info & Bemaßung','Objektpositionen und Produktionshinweise',
+    viewSetting('infoDims','Info-Bemaßung anzeigen','Feine X-/Y-Maße an eingefügten Objekten')+
+    '<div class="settings-sub">Bemaßung</div><div class="fg">'+quickFld('Schriftgröße Info-Maße','infoDims.font',[8,10,12,14,16,18,20,24],1,8,'')+quickFld('Linienstärke Info-Maße','infoDims.stroke',[0.5,0.75,1,1.25,1.5,2],0.25,0.5,'')+colorFld('Farbe Info-Maße','infoDims.color')+'</div>'+
+    '<div class="settings-note">Der obere i-Button schaltet genau diese Bemaßung ein oder aus. Objekt-Info-Texte stellst du direkt am ausgewählten Rechteck/Kreis/Kreuz/Bild ein; dort kannst du Text, Position, Größe und Farbe wählen.</div>',true);
+
+  h+=settingSection('quality','Projektionsqualität','Schärfe, Kontrast und Pixel-Ausrichtung',
     '<div class="fg"><div class="f"><label>Schriftgewicht</label><select class="inp" data-set="projectionWeight">'+[[400,'400 Normal'],[500,'500 Medium'],[600,'600 Semibold'],[700,'700 Bold']].map(([v,l])=>'<option value="'+v+'"'+(+setup.projectionWeight===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>'+
     quickFld('Textkontur (px)','projectionTextStroke',[0,0.2,0.4,0.6,0.8,1],0.1,0,'')+colorFld('Textkontur Farbe','projectionTextStrokeColor')+
     '<div class="f"><label>Kontrast</label><input class="inp" type="number" min="0.7" max="1.6" step="0.05" data-set="projectionContrast" value="'+(+setup.projectionContrast||1)+'"></div></div>'+
     '<label class="chk" style="margin-top:12px"><input type="checkbox" data-set="projectionPixelSnap"'+(setup.projectionPixelSnap?' checked':'')+'> Maßzahlen pixelgenau ausrichten</label>'+
-    '<p class="hint" style="margin-top:8px">Empfehlung zum Start: Arial oder Verdana, Gewicht 600, Textkontur 0–0,3 px, Kontrast 1,0–1,1. Zu viel Kontur oder Kontrast kann wieder unschärfer wirken.</p></div>';
+    '<div class="settings-note">Guter Ausgangspunkt: Arial oder Verdana, Gewicht 600, Kontur 0–0,3 px, Kontrast 1,0–1,1.</div>');
 
-  h += '<div class="card"><h4>Maßanzeigen / Info</h4><p class="hint">Steuert projizierte Positionswerte und die Info-Ansicht.</p>'+
-    '<label class="chk" style="margin-bottom:12px"><input type="checkbox" data-set="measureLabels.showLineValues"'+(setup.measureLabels.showLineValues!==false?' checked':'')+'> Werte an H-/V-Linien auf dem Beamer anzeigen</label>'+
-    '<div class="fg">'+quickFld('Schriftgröße Linienwerte','measureLabels.font',[8,10,12,14,16,18,20,24],1,8,'')+colorFld('Farbe Linienwerte','measureLabels.color')+quickFld('Schriftgröße Info-Maße','infoDims.font',[8,10,12,14,16,18,20,24],1,8,'')+quickFld('Linienstärke Info-Maße','infoDims.stroke',[0.5,0.75,1,1.25,1.5,2],0.25,0.5,'')+colorFld('Farbe Info-Maße','infoDims.color')+'</div></div>';
+  h+=settingSection('direction','Textilrichtung','Bezug für Kragen, Lineal und HSP',
+    '<div class="lab">Textil liegt auf der Presse mit</div>'+segSet('direction',[['up','Kragen oben'],['down','Kragen unten']]));
 
-  h += '<div class="card"><h4>Textilrichtung</h4><p class="hint">Wie das Textil auf der Presse liegt. Lineal und HSP-Linie richten sich danach aus.</p>' + segSet('direction', [['up', 'Kragen oben'], ['down', 'Kragen unten']]) + '</div>';
+  h+=settingSection('outer','Außenlinien','Parallele Orientierung außerhalb der Platte',
+    viewSetting('outerGuides','Außenlinien anzeigen','Parallel zur aktuellen Plattenkante')+
+    '<div class="fg" style="margin-top:12px">'+fld('Überstand Hilfslinien (cm)','outerGuides.extend',0.5,0)+quickFld('Linienstärke (px)','outerGuides.width',[0.5,1,1.5,2,3,4],0.5,0.5,'')+colorFld('Farbe','outerGuides.color')+'</div>'+
+    '<label class="chk" style="margin:12px 0"><input type="checkbox" data-set="outerGuides.showLabels"'+(setup.outerGuides.showLabels!==false?' checked':'')+'> Maße an Außenlinien anzeigen</label>'+
+    '<div class="fg">'+quickFld('Schriftgröße Außenmaße','outerGuides.labelFont',[8,10,12,14,16,18,20,24],1,8,'')+colorFld('Farbe Außenmaße','outerGuides.labelColor')+'</div>'+
+    '<div class="settings-sub">Abstände</div>'+(setup.outerGuides.lines||[]).map((v,i)=>'<div class="row" style="margin:7px 0"><input class="inp" type="number" step="0.5" min="0.1" data-set="outerGuides.lines.'+i+'" value="'+v+'"><span style="white-space:nowrap">cm außen</span><button class="btn sm danger" data-act="outerGuideDel" data-arg="'+i+'">✕</button></div>').join('')+
+    '<button class="btn sm" style="margin-top:8px" data-act="outerGuideAdd">Außenlinie hinzufügen</button>');
 
-  h += '<div class="card"><h4>Außenlinien / Textilausrichtung</h4><p class="hint">Die Linien liegen immer relativ zur aktuellen Plattengröße. Beim Umrüsten auf eine kleinere Platte rücken sie automatisch mit. H-/V-Hilfslinien dürfen nur um den eingestellten Überstand über die Platte hinausragen.</p>'+
-    '<div class="fg">'+fld('Überstand Hilfslinien (cm)','outerGuides.extend',0.5,0)+quickFld('Linienstärke (px)','outerGuides.width',[0.5,1,1.5,2,3,4],0.5,0.5,'')+colorFld('Farbe','outerGuides.color')+'</div>'+ '<label class="chk" style="margin:12px 0"><input type="checkbox" data-set="outerGuides.showLabels"'+(setup.outerGuides.showLabels!==false?' checked':'')+'> Maße an Außenlinien anzeigen</label><div class="fg">'+quickFld('Schriftgröße Außenmaße','outerGuides.labelFont',[8,10,12,14,16,18,20,24],1,8,'')+colorFld('Farbe Außenmaße','outerGuides.labelColor')+'</div>'+
-    '<div class="lab" style="margin-top:12px">Parallele Außenlinien</div>'+
-    '<div id="outerGuideRows">'+(setup.outerGuides.lines||[]).map((v,i)=>'<div class="row" style="margin:6px 0"><input class="inp" type="number" step="0.5" min="0.1" data-set="outerGuides.lines.'+i+'" value="'+v+'"><span>cm außerhalb</span><button class="btn sm danger" data-act="outerGuideDel" data-arg="'+i+'">✕</button></div>').join('')+'</div>'+
-    '<button class="btn sm" data-act="outerGuideAdd">Außenlinie hinzufügen</button></div>';
+  h+=settingSection('hsp','HSP-Lineal','Brust-/Rückenposition ab Hals-Schulter-Punkt',
+    viewSetting('hsp','HSP-Lineal anzeigen','Direkt auf Platte und Beamer')+
+    '<div class="lab" style="margin-top:12px">Nullpunkt</div>'+segSet('hsp.placement',[['on','Auf der Platte'],['above','Oberhalb']])+
+    '<div class="fg" style="margin-top:12px">'+fld('Versatz zur Mitte (cm)','hsp.x')+fld('Abstand Nullpunkt (cm)','hsp.start')+fld('Länge (cm)','hsp.length',1,1)+fld('Teilung (cm)','hsp.tick',0.1,0.1)+quickFld('Linienstärke','hsp.width',[1,1.5,2,3,4],0.5,0.5,'')+quickFld('Schriftgröße','hsp.font',[8,10,12,14,16,18,20],1,6,'')+colorFld('Farbe','hsp.color')+'</div>');
 
-  h += '<div class="card"><h4>HSP-Lineal</h4><p class="hint">Senkrechte Messlinie ab dem Hals-Schulter-Punkt, zum Platzieren von Brust- und Rückenmotiven.</p>' +
-    '<div class="lab">Nullpunkt</div><div style="margin-bottom:14px">' + segSet('hsp.placement', [['on', 'Auf der Platte'], ['above', 'Oberhalb der Platte']]) + '</div>' +
-    '<div class="fg">' + fld('Versatz zur Mitte (cm)', 'hsp.x') + fld('Abstand Nullpunkt (cm)', 'hsp.start') + fld('Länge (cm)', 'hsp.length', 1, 1) + fld('Teilung (cm)', 'hsp.tick', 0.1, 0.1) + quickFld('Linienstärke (px)','hsp.width',[1,1.5,2,3,4],0.5,0.5,'') + quickFld('Schriftgröße','hsp.font',[8,10,12,14,16,18,20],1,6,'') + colorFld('Farbe', 'hsp.color') + '</div></div>';
+  h+=settingSection('cross','Fadenkreuz','Vorpositionierung mit Skala und Innenquadrat',
+    viewSetting('cross','Fadenkreuz anzeigen','Direkt auf Platte und Beamer')+
+    '<div class="fg" style="margin-top:12px">'+fld('Versatz X (cm)','cross.x')+fld('Versatz Y (cm)','cross.y')+fld('Innenquadrat (cm)','cross.inner',0.5,0)+fld('Armlänge (cm)','cross.arm',1,1)+fld('Rasterung (cm)','cross.raster',0.1,0.1)+quickFld('Linienstärke','cross.width',[1,1.5,2,3,4],0.5,0.5,'')+quickFld('Schriftgröße','cross.font',[8,10,12,14,16,18,20],1,6,'')+colorFld('Kreuz','cross.c1')+colorFld('Innenquadrat','cross.c2')+colorFld('Teilstriche','cross.c3')+colorFld('Zahlen','cross.c4')+'</div>');
 
-  h += '<div class="card"><h4>Fadenkreuz</h4><p class="hint">Vorpositionier-Kreuz mit Skala und Innenquadrat, ausgehend von der Plattenmitte.</p>' +
-    '<div class="fg">' + fld('Versatz X (cm)', 'cross.x') + fld('Versatz Y (cm)', 'cross.y') + fld('Innenquadrat (cm)', 'cross.inner', 0.5, 0) + fld('Armlänge (cm)', 'cross.arm', 1, 1) + fld('Rasterung (cm)', 'cross.raster', 0.1, 0.1) + quickFld('Linienstärke (px)','cross.width',[1,1.5,2,3,4],0.5,0.5,'') + quickFld('Schriftgröße','cross.font',[8,10,12,14,16,18,20],1,6,'') +
-    colorFld('Kreuz', 'cross.c1') + colorFld('Innenquadrat', 'cross.c2') + colorFld('Teilstriche', 'cross.c3') + colorFld('Zahlen', 'cross.c4') + '</div></div>';
+  h+=settingSection('ruler','Lineal-Vorlage','Feste Hilfslinien A–G und eigene Linien',
+    viewSetting('ruler','Lineal anzeigen','Feste Linien aus dieser Vorlage')+
+    '<div style="overflow-x:auto;margin-top:12px"><table class="rt"><tr><th>Name</th><th>Richtung</th><th>Bezug</th><th>Abstand</th><th>Länge</th><th>Spiegeln</th><th>Farbe</th><th></th></tr>'+
+    setup.ruler.lines.map((L,i)=>'<tr><td><input class="inp" style="width:48px" data-set="ruler.lines.'+i+'.label" value="'+esc(L.label)+'"></td><td><select class="inp" data-set="ruler.lines.'+i+'.o"><option value="h"'+(L.o==='h'?' selected':'')+'>waagerecht</option><option value="v"'+(L.o==='v'?' selected':'')+'>senkrecht</option></select></td><td><select class="inp" data-set="ruler.lines.'+i+'.ref">'+(L.o==='h'?[['top','oben'],['bottom','unten'],['center','Mitte']]:[['left','links'],['right','rechts'],['center','Mitte']]).map(([v,l])=>'<option value="'+v+'"'+(L.ref===v?' selected':'')+'>'+l+'</option>').join('')+'</select></td><td><input class="inp" style="width:70px" type="number" step="0.1" data-set="ruler.lines.'+i+'.dist" value="'+L.dist+'"></td><td><input class="inp" style="width:70px" type="number" step="0.5" min="0" data-set="ruler.lines.'+i+'.len" value="'+L.len+'"></td><td style="text-align:center"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--accent)" data-set="ruler.lines.'+i+'.mirror"'+(L.mirror?' checked':'')+'></td><td><input type="color" data-set="ruler.lines.'+i+'.color" value="'+L.color+'"></td><td><button class="btn sm danger" data-act="rulerDel" data-arg="'+i+'">✕</button></td></tr>').join('')+
+    '</table></div><div class="row" style="margin-top:12px;flex-wrap:wrap"><button class="btn sm" data-act="rulerAdd">Linie hinzufügen</button></div><div class="fg" style="margin-top:12px">'+quickFld('Linienstärke','ruler.width',[1,1.5,2,3,4],0.5,0.5,'')+quickFld('Schriftgröße','ruler.font',[8,10,12,14,16,18,20],1,6,'')+'</div>');
 
-  h += '<div class="card"><h4>Lineal-Vorlage</h4><p class="hint">Feste Hilfslinien, die mit „Lineal“ eingeblendet werden. Abstände in cm vom gewählten Rand, Länge 0 = ganze Platte. „Spiegeln“ setzt die Linie zusätzlich auf die Gegenseite.</p>' +
-    '<div style="overflow-x:auto"><table class="rt"><tr><th>Name</th><th>Richtung</th><th>Bezug</th><th>Abstand</th><th>Länge</th><th>Spiegeln</th><th>Farbe</th><th></th></tr>' +
-    setup.ruler.lines.map((L, i) => '<tr>' +
-      '<td><input class="inp" style="width:48px" data-set="ruler.lines.' + i + '.label" value="' + esc(L.label) + '"></td>' +
-      '<td><select class="inp" data-set="ruler.lines.' + i + '.o"><option value="h"' + (L.o === 'h' ? ' selected' : '') + '>waagerecht</option><option value="v"' + (L.o === 'v' ? ' selected' : '') + '>senkrecht</option></select></td>' +
-      '<td><select class="inp" data-set="ruler.lines.' + i + '.ref">' + (L.o === 'h' ? [['top', 'oben'], ['bottom', 'unten'], ['center', 'Mitte']] : [['left', 'links'], ['right', 'rechts'], ['center', 'Mitte']]).map(([v, l]) => '<option value="' + v + '"' + (L.ref === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></td>' +
-      '<td><input class="inp" style="width:70px" type="number" step="0.1" data-set="ruler.lines.' + i + '.dist" value="' + L.dist + '"></td>' +
-      '<td><input class="inp" style="width:70px" type="number" step="0.5" min="0" data-set="ruler.lines.' + i + '.len" value="' + L.len + '"></td>' +
-      '<td style="text-align:center"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--accent)" data-set="ruler.lines.' + i + '.mirror"' + (L.mirror ? ' checked' : '') + '></td>' +
-      '<td><input type="color" data-set="ruler.lines.' + i + '.color" value="' + L.color + '"></td>' +
-      '<td><button class="btn sm danger" data-act="rulerDel" data-arg="' + i + '">✕</button></td></tr>').join('') +
-    '</table></div><div class="row" style="margin-top:12px;flex-wrap:wrap"><button class="btn sm" data-act="rulerAdd">Linie hinzufügen</button><span class="spacer"></span>' +
-    '<div class="f" style="width:130px">' + fld('Linienstärke (px)', 'ruler.width', 1, 1).replace('<div class="f">', '').replace(/<\/div>$/, '') + '</div><div class="f" style="width:110px">' + fld('Schriftgröße', 'ruler.font', 1, 6).replace('<div class="f">', '').replace(/<\/div>$/, '') + '</div></div></div>';
+  h+=settingSection('startup','Start & Daten','Startverhalten, Export und Zurücksetzen',
+    '<div class="f"><label>Beim Start</label><select class="inp" data-set="startTemplate"><option value=""'+(!setup.startTemplate?' selected':'')+'>Letzten Stand fortsetzen</option><option value="__blank"'+(setup.startTemplate==='__blank'?' selected':'')+'>Mit leeren Platten starten</option>'+Object.keys(t).map(n=>'<option value="'+esc(n)+'"'+(setup.startTemplate===n?' selected':'')+'>Vorlage: '+esc(n)+'</option>').join('')+'</select></div>'+
+    '<div class="row" style="flex-wrap:wrap;margin-top:14px"><button class="btn sm" data-act="exportSetup">Einstellungen exportieren</button><button class="btn sm" data-act="importSetup">Einstellungen importieren</button><span class="spacer"></span><button class="btn sm danger" data-act="resetSetup">Alles zurücksetzen</button></div>');
 
-  h += '<div class="card"><h4>Beim Start</h4><p class="hint">Was nach dem Öffnen der App geladen wird.</p><select class="inp" data-set="startTemplate" style="max-width:360px"><option value=""' + (!setup.startTemplate ? ' selected' : '') + '>Letzten Stand fortsetzen</option><option value="__blank"' + (setup.startTemplate === '__blank' ? ' selected' : '') + '>Mit leeren Platten starten</option>' +
-    Object.keys(t).map(n => '<option value="' + esc(n) + '"' + (setup.startTemplate === n ? ' selected' : '') + '>Vorlage: ' + esc(n) + '</option>').join('') + '</select></div>';
-
-  h += '<div class="card"><h4>Daten</h4><p class="hint">Einstellungen samt Kalibrierung sichern oder auf ein anderes Gerät übertragen.</p><div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="exportSetup">Einstellungen exportieren</button><button class="btn sm" data-act="importSetup">Einstellungen importieren</button><span class="spacer"></span><button class="btn sm danger" data-act="resetSetup">Alles zurücksetzen</button></div></div>';
-  $('#settingsBody').innerHTML = h;
+  $('#settingsBody').innerHTML=h;
 }
-
 /* ---------- Kalibrierung ---------- */
 function renderCalib() {
   const c=S.calib, st=c.step, two=setup.twoPlates, key=two?(c.plate||'L'):'M', G=setup.calibration||{};
