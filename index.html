@@ -101,6 +101,10 @@ textarea,input[type=text],input[type=number]{user-select:text;-webkit-user-selec
 .slider>button{width:40px;height:40px;border-radius:10px;background:var(--fill);font-size:19px;flex-shrink:0}
 .slider>button:active{background:var(--accent-soft)}
 input[type=range]{flex:1;accent-color:var(--accent);height:30px;min-width:0}
+@media (pointer:coarse){
+  .slider input[type=range]{pointer-events:none;opacity:.62}
+  .slider>button{width:44px;height:44px}
+}
 .inp{width:100%;background:var(--fill);border:1px solid transparent;border-radius:var(--rs);padding:8px 10px;font-size:14px;outline:none;min-height:38px}
 .inp:focus{background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .inp.num{width:84px;text-align:right;font-variant-numeric:tabular-nums}
@@ -1012,8 +1016,9 @@ function moveBlock(withRot) {
   return '<div class="sec"><div class="row" style="gap:14px;align-items:flex-end">' + padHTML(withRot) + '<div style="flex:1;min-width:0">' + stepsHTML() + '</div></div></div>';
 }
 function linePadHTML(type){
-  if(type==='h') return '<div class="pad"><span></span><button data-act="nudge" data-arg="0,-1" aria-label="Nach oben">↑</button><span></span><span></span><button data-act="nudge" data-arg="0,1" aria-label="Nach unten">↓</button><span></span></div>';
-  return '<div class="pad"><span></span><span></span><span></span><button data-act="nudge" data-arg="-1,0" aria-label="Nach links">←</button><span></span><button data-act="nudge" data-arg="1,0" aria-label="Nach rechts">→</button></div>';
+  const center='<button class="rotb" data-act="lineCenter" title="Linie exakt zentrieren" aria-label="Linie exakt zentrieren">⊕</button>';
+  if(type==='h') return '<div class="pad"><span></span><button data-act="nudge" data-arg="0,-1" aria-label="Nach oben">↑</button><span></span><span></span>'+center+'<span></span><span></span><button data-act="nudge" data-arg="0,1" aria-label="Nach unten">↓</button><span></span></div>';
+  return '<div class="pad"><span></span><span></span><span></span><button data-act="nudge" data-arg="-1,0" aria-label="Nach links">←</button>'+center+'<button data-act="nudge" data-arg="1,0" aria-label="Nach rechts">→</button><span></span><span></span><span></span></div>';
 }
 function moveLineBlock(type){
   return '<div class="sec"><div class="row" style="gap:14px;align-items:flex-end">' + linePadHTML(type) + '<div style="flex:1;min-width:0">' + stepsHTML() + '</div></div></div>';
@@ -1205,6 +1210,14 @@ const ACT = {
   step(v) { S.step = +v; renderInsp(); },
   rotstep(v) { S.rotStep = +v; renderInsp(); },
   nudge(a) { const [x, y] = a.split(',').map(Number); moveSel(x * S.step, y * S.step); },
+  lineCenter() {
+    const s=one(); if(!s || s.k!=='l') return;
+    const o=s.o; if(lineLocked(o)) return toast('Gesperrt – erst entsperren');
+    const target=(o.type==='v'?dims().w:dims().h)/2;
+    moveLine(o,target-o.pos,new Set());
+    commit();renderCanvas();renderInsp();updateReadouts();
+    toast(o.type==='v'?'V-Linie auf 0 cm zentriert':'H-Linie vertikal zentriert');
+  },
   rot(a) {
     const s = one(); if (!s || s.k !== 's') return;
     if (s.o.locked) return toast('Gesperrt – erst entsperren');
