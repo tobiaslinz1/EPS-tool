@@ -632,32 +632,47 @@ function outerGuidesSVG(w,h,su,px){
 }
 function infoDimsSVG(pl,w,h,px,su){
   const I=(su&&su.infoDims)||{}, col=I.color||'#ff2d95';
-  const fs=Math.max(10,+I.font||13)*px;
-  const sw=Math.max(1,+I.stroke||1.25)*px;
-  const tick=Math.max(5*px,.22), mark=Math.max(6*px,.28);
+  const fs=Math.max(10,+I.font||13)*px, sw=Math.max(1,+I.stroke||1.25)*px;
+  const tick=Math.max(5*px,.22), mark=Math.max(6*px,.28), cx=w/2;
   let s='';
   for(const o of (pl.shapes||[])){
     const bb=rotBBox(o),x=o.x,y=o.y,left=x-bb.w/2,right=x+bb.w/2,top=y-bb.h/2,bottom=y+bb.h/2;
-    const hVal=r2(o.w), vVal=r2(o.h);
-    const yDim=clamp(bottom+Math.max(1.0,14*px),1.0,h-1.0);
-    const xDim=clamp(left-Math.max(1.0,14*px),1.0,w-1.0);
+    const objGap=Math.max(1.0,14*px), posGap=Math.max(2.2,34*px);
+    const yObj=clamp(bottom+objGap,1,h-1), yPos=clamp(bottom+posGap,1,h-1);
+    const xObj=clamp(left-objGap,1,w-1), xPos=clamp(left-posGap,1,w-1);
+    const posX=r2(x-cx), posY=r2(h-y);
 
     s+='<g pointer-events="none">';
-    // pink X marker on object center
+
+    // Pink X = reference point for positional measurements.
     s+='<line x1="'+(x-mark)+'" y1="'+(y-mark)+'" x2="'+(x+mark)+'" y2="'+(y+mark)+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
     s+='<line x1="'+(x-mark)+'" y1="'+(y+mark)+'" x2="'+(x+mark)+'" y2="'+(y-mark)+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
 
-    // horizontal object width below object
-    s+='<line x1="'+left+'" y1="'+yDim+'" x2="'+right+'" y2="'+yDim+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
-    s+='<line x1="'+left+'" y1="'+(yDim-tick)+'" x2="'+left+'" y2="'+(yDim+tick)+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
-    s+='<line x1="'+right+'" y1="'+(yDim-tick)+'" x2="'+right+'" y2="'+(yDim+tick)+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
-    s+='<text x="'+x+'" y="'+(yDim-Math.max(.45,6*px))+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" font-weight="700" style="stroke:none">'+fmt(hVal)+' cm</text>';
+    // Object size: close to the object.
+    s+='<line x1="'+left+'" y1="'+yObj+'" x2="'+right+'" y2="'+yObj+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+left+'" y1="'+(yObj-tick)+'" x2="'+left+'" y2="'+(yObj+tick)+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+right+'" y1="'+(yObj-tick)+'" x2="'+right+'" y2="'+(yObj+tick)+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<text x="'+x+'" y="'+(yObj-Math.max(.45,6*px))+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" font-weight="700" style="stroke:none">'+(o.type==='circle'?'Ø '+fmt(o.w):fmt(o.w))+' cm</text>';
 
-    // vertical object height left of object
-    s+='<line x1="'+xDim+'" y1="'+top+'" x2="'+xDim+'" y2="'+bottom+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
-    s+='<line x1="'+(xDim-tick)+'" y1="'+top+'" x2="'+(xDim+tick)+'" y2="'+top+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
-    s+='<line x1="'+(xDim-tick)+'" y1="'+bottom+'" x2="'+(xDim+tick)+'" y2="'+bottom+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
-    s+='<text x="'+(xDim-Math.max(.45,6*px))+'" y="'+y+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" dominant-baseline="middle" font-weight="700" style="stroke:none" transform="rotate(-90 '+(xDim-Math.max(.45,6*px))+' '+y+')">'+fmt(vVal)+' cm</text>';
+    if(o.type!=='circle'){
+      s+='<line x1="'+xObj+'" y1="'+top+'" x2="'+xObj+'" y2="'+bottom+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+      s+='<line x1="'+(xObj-tick)+'" y1="'+top+'" x2="'+(xObj+tick)+'" y2="'+top+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+      s+='<line x1="'+(xObj-tick)+'" y1="'+bottom+'" x2="'+(xObj+tick)+'" y2="'+bottom+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+      const tx=xObj-Math.max(.45,6*px);
+      s+='<text x="'+tx+'" y="'+y+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" dominant-baseline="middle" font-weight="700" style="stroke:none" transform="rotate(-90 '+tx+' '+y+')">'+fmt(o.h)+' cm</text>';
+    }
+
+    // Position of the pink X: farther outside, values only — no X/Y letters.
+    s+='<line x1="'+cx+'" y1="'+yPos+'" x2="'+x+'" y2="'+yPos+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-dasharray="'+Math.max(4*px,.2)+' '+Math.max(3*px,.15)+'"/>';
+    s+='<line x1="'+cx+'" y1="'+(yPos-tick)+'" x2="'+cx+'" y2="'+(yPos+tick)+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+x+'" y1="'+(yPos-tick)+'" x2="'+x+'" y2="'+(yPos+tick)+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<text x="'+((cx+x)/2)+'" y="'+(yPos-Math.max(.45,6*px))+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" font-weight="700" style="stroke:none">'+(posX>0?'+':'')+fmt(posX)+' cm</text>';
+
+    s+='<line x1="'+xPos+'" y1="'+h+'" x2="'+xPos+'" y2="'+y+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-dasharray="'+Math.max(4*px,.2)+' '+Math.max(3*px,.15)+'"/>';
+    s+='<line x1="'+(xPos-tick)+'" y1="'+h+'" x2="'+(xPos+tick)+'" y2="'+h+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+(xPos-tick)+'" y1="'+y+'" x2="'+(xPos+tick)+'" y2="'+y+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    const pxText=xPos-Math.max(.45,6*px);
+    s+='<text x="'+pxText+'" y="'+((h+y)/2)+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" dominant-baseline="middle" font-weight="700" style="stroke:none" transform="rotate(-90 '+pxText+' '+((h+y)/2)+')">'+fmt(posY)+' cm</text>';
 
     s+='</g>';
   }
@@ -1624,7 +1639,7 @@ function segSet(path, opts) {
   return '<div class="seg">' + opts.map(([v, l]) => '<button class="' + (String(cur) === String(v) ? 'on' : '') + '" data-act="setv" data-arg="' + path + '=' + v + '">' + l + '</button>').join('') + '</div>';
 }
 function settingSection(id,title,sub,body,open){
-  return '<details class="settings-section" data-settings-sec="'+id+'"'+(open?' open':'')+'><summary><div>'+title+(sub?'<small>'+sub+'</small>':'')+'</div></summary><div class="settings-body">'+body+'</div></details>';
+  return '<details class="settings-section" data-settings-sec="'+id+'"'+(open===true?' open':'')+'><summary><div>'+title+(sub?'<small>'+sub+'</small>':'')+'</div></summary><div class="settings-body">'+body+'</div></details>';
 }
 function viewSetting(k,label,sub){
   const act=k==='infoDims'?'toggleInfoDims':'view';
@@ -1641,7 +1656,7 @@ function renderSettings() {
     '<label class="chk" style="margin:14px 0"><input type="checkbox" data-set="outline"'+(setup.outline?' checked':'')+'> Plattenrand projizieren</label>'+
     '<div class="fg">'+fld('Rahmen nach innen (mm)','frameInset',0.5,0)+'</div>'+
     '<div class="settings-sub">Ausrichtung</div><div class="lab">Beamerbild drehen</div>'+segSet('outputRotation',[[0,'0°'],[90,'90°'],[180,'180°'],[270,'270°']])+
-    '<div class="settings-sub">Schrift</div><div class="f"><label>Schriftart Projektion</label><select class="inp" data-set="projectionFont">'+fonts.map(([v,l])=>'<option value="'+v+'"'+(setup.projectionFont===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>',true);
+    '<div class="settings-sub">Schrift</div><div class="f"><label>Schriftart Projektion</label><select class="inp" data-set="projectionFont">'+fonts.map(([v,l])=>'<option value="'+v+'"'+(setup.projectionFont===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>');
 
   h+=settingSection('grid','Raster & Raster-Maße','Rasterlinien, Zahlen und Position der Beschriftung',
     viewSetting('grid','Raster anzeigen','Raster auf Tablet und Beamer')+
@@ -1656,18 +1671,18 @@ function renderSettings() {
       quickFld('Schriftgröße','gridFont',[8,10,12,14,16,18,20],1,6,'')+colorFld('Schriftfarbe','gridLabelColor')+
     '</div><div class="settings-sub">Position der Zahlen</div><div class="fg">'+
       fld('Seitlich → / ← (cm)','gridLabelSideX',0.1)+fld('Seitlich ↓ / ↑ (cm)','gridLabelSideY',0.1)+fld('Oben → / ← (cm)','gridLabelTopX',0.1)+fld('Oben ↓ / ↑ (cm)','gridLabelTopY',0.1)+
-    '</div><div class="settings-note">Bei den oberen Zahlen verschiebt ein negativer Y-Wert die Beschriftung weiter nach oben. So kannst du Kollisionen mit Außenlinien vermeiden.</div>',true);
+    '</div><div class="settings-note">Bei den oberen Zahlen verschiebt ein negativer Y-Wert die Beschriftung weiter nach oben. So kannst du Kollisionen mit Außenlinien vermeiden.</div>');
 
   h+=settingSection('lines','H- & V-Linien','Position, Werte und Darstellung der frei gesetzten Linien',
     viewSetting('lockLines','Alle H-/V-Linien sperren','Schützt vor versehentlichem Verschieben')+
     '<label class="chk" style="margin:12px 0"><input type="checkbox" data-set="measureLabels.showLineValues"'+(setup.measureLabels.showLineValues!==false?' checked':'')+'> Maßwert direkt an H-/V-Linie anzeigen</label>'+
     '<div class="fg">'+quickFld('Schriftgröße Maßwert','measureLabels.font',[8,10,12,14,16,18,20,24],1,8,'')+colorFld('Farbe Maßwert','measureLabels.color')+'</div>'+
-    '<div class="settings-preview"><div class="settings-preview-title">Vorschau</div><svg viewBox="0 0 320 105" style="width:100%;height:auto;display:block"><line x1="160" y1="18" x2="160" y2="88" stroke="#32ade6" stroke-width="1.5"/><line x1="72" y1="58" x2="248" y2="58" stroke="#ff2d55" stroke-width="1.5"/><circle cx="160" cy="58" r="5" fill="#fff" stroke="#32ade6" stroke-width="1.5"/><text x="166" y="28" fill="'+setup.measureLabels.color+'" font-size="13">0,0 cm</text><text x="205" y="52" fill="'+setup.measureLabels.color+'" font-size="13">12,0 cm</text></svg></div><div class="settings-note"><b>H-Linie:</b> 0 cm liegt an der körpernahen/vorderen Plattenkante. <b>V-Linie:</b> 0 cm liegt exakt in der Plattenmitte; links negativ, rechts positiv. Einzelne Linie antippen für Position, Farbe und Stärke.</div>',true);
+    '<div class="settings-preview"><div class="settings-preview-title">Vorschau</div><svg viewBox="0 0 320 105" style="width:100%;height:auto;display:block"><line x1="160" y1="18" x2="160" y2="88" stroke="#32ade6" stroke-width="1.5"/><line x1="72" y1="58" x2="248" y2="58" stroke="#ff2d55" stroke-width="1.5"/><circle cx="160" cy="58" r="5" fill="#fff" stroke="#32ade6" stroke-width="1.5"/><text x="166" y="28" fill="'+setup.measureLabels.color+'" font-size="13">0,0 cm</text><text x="205" y="52" fill="'+setup.measureLabels.color+'" font-size="13">12,0 cm</text></svg></div><div class="settings-note"><b>H-Linie:</b> 0 cm liegt an der körpernahen/vorderen Plattenkante. <b>V-Linie:</b> 0 cm liegt exakt in der Plattenmitte; links negativ, rechts positiv. Einzelne Linie antippen für Position, Farbe und Stärke.</div>');
 
   h+=settingSection('info','Info & Bemaßung','Objektpositionen und Produktionshinweise',
-    viewSetting('infoDims','Info-Bemaßung anzeigen','Breite unten, Höhe links und pinkes X am Objekt')+
+    viewSetting('infoDims','Info-Bemaßung anzeigen','Objektgröße plus Position des pinken X')+
     '<div class="settings-sub">Bemaßung</div><div class="fg">'+quickFld('Schriftgröße Info-Maße','infoDims.font',[8,10,12,14,16,18,20,24],1,8,'')+quickFld('Linienstärke Info-Maße','infoDims.stroke',[0.5,0.75,1,1.25,1.5,2],0.25,0.5,'')+colorFld('Farbe Info-Maße','infoDims.color')+'</div>'+
-    '<div class="settings-preview"><div class="settings-preview-title">Vorschau</div><svg viewBox="0 0 320 140" style="width:100%;height:auto;display:block"><rect x="105" y="32" width="110" height="62" rx="4" fill="none" stroke="#d1d1d6"/><line x1="153" y1="57" x2="167" y2="71" stroke="'+setup.infoDims.color+'" stroke-width="2"/><line x1="153" y1="71" x2="167" y2="57" stroke="'+setup.infoDims.color+'" stroke-width="2"/><line x1="105" y1="112" x2="215" y2="112" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><line x1="105" y1="104" x2="105" y2="120" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><line x1="215" y1="104" x2="215" y2="120" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><text x="160" y="103" text-anchor="middle" fill="'+setup.infoDims.color+'" font-size="14" font-weight="650">42,0 cm</text><line x1="85" y1="32" x2="85" y2="94" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><line x1="77" y1="32" x2="93" y2="32" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><line x1="77" y1="94" x2="93" y2="94" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><text x="72" y="63" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 72 63)" fill="'+setup.infoDims.color+'" font-size="14" font-weight="650">24,0 cm</text></svg></div><div class="settings-note">Der obere i-Button schaltet die Objektbemaßung ein oder aus. Es werden nur Breite unterhalb und Höhe links vom Objekt angezeigt.</div>',true);
+    '<div class="settings-preview"><div class="settings-preview-title">Vorschau</div><svg viewBox="0 0 320 140" style="width:100%;height:auto;display:block"><rect x="105" y="32" width="110" height="62" rx="4" fill="none" stroke="#d1d1d6"/><line x1="153" y1="57" x2="167" y2="71" stroke="'+setup.infoDims.color+'" stroke-width="2"/><line x1="153" y1="71" x2="167" y2="57" stroke="'+setup.infoDims.color+'" stroke-width="2"/><line x1="105" y1="112" x2="215" y2="112" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><line x1="105" y1="104" x2="105" y2="120" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><line x1="215" y1="104" x2="215" y2="120" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><text x="160" y="103" text-anchor="middle" fill="'+setup.infoDims.color+'" font-size="14" font-weight="650">42,0 cm</text><line x1="85" y1="32" x2="85" y2="94" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><line x1="77" y1="32" x2="93" y2="32" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><line x1="77" y1="94" x2="93" y2="94" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><text x="72" y="63" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 72 63)" fill="'+setup.infoDims.color+'" font-size="14" font-weight="650">24,0 cm</text></svg></div><div class="settings-note">Der obere i-Button zeigt Objektgröße und Position. Das pinke X ist der Bezugspunkt für die Positionsmaße; dort stehen nur die cm-Werte ohne X-/Y-Buchstaben.</div>');
 
   h+=settingSection('quality','Projektionsqualität','Schärfe, Kontrast und Pixel-Ausrichtung',
     '<div class="fg"><div class="f"><label>Schriftgewicht</label><select class="inp" data-set="projectionWeight">'+[[400,'400 Normal'],[500,'500 Medium'],[600,'600 Semibold'],[700,'700 Bold']].map(([v,l])=>'<option value="'+v+'"'+(+setup.projectionWeight===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>'+
@@ -1993,12 +2008,12 @@ function bindGlobal() {
       if(ev.pointerId!==e.pointerId)return;
       thumb.removeEventListener('pointermove',move);thumb.removeEventListener('pointerup',up);thumb.removeEventListener('pointercancel',up);
       try{thumb.releasePointerCapture(e.pointerId);}catch(_){}
-      propInput(range,true);
+      propInput(range);
     };
     thumb.addEventListener('pointermove',move);
     thumb.addEventListener('pointerup',up);
     thumb.addEventListener('pointercancel',up);
-  },true);
+  });
   document.addEventListener('input', e => {
     const el = e.target;
     if (el.dataset.p) propInput(el, false);
