@@ -320,7 +320,7 @@ const DEFAULT_SETUP = {
     L: { w: 40, h: 50, x: 40, y: 30, corners: null, offsetX: 0, offsetY: 0, offsetRot: 0 },
     R: { w: 40, h: 50, x: 120, y: 30, corners: null, offsetX: 0, offsetY: 0, offsetRot: 0 }
   },
-  bg: '#000000', plateFill: 'dark', outline: true,
+  bg: '#000000', plateFill: 'dark', outline: true, frameInset: 3, outputRotation: 0,
   gridSize: 1, gridColor: '#ffffff', gridMajor: 5, gridLabelEvery: 5, gridDecimals: 0, gridFont: 10, gridLabelColor: '#ffffff', gridMinorOpacity: 0.10, gridMajorOpacity: 0.26,
   direction: 'up',
   hsp: { placement: 'on', x: 0, start: 2, length: 30, tick: 1, color: '#ff2d55', font: 12, width: 2 },
@@ -629,7 +629,8 @@ function plateSVG(pl, su, view, pid, K, o) {
   for (const ln of pl.lines) s += lineSVG(ln, w, h, px, ed, sel.includes('l' + ln.id), view, (su.outerGuides||{}).extend);
   if (ed || su.outline) {
     const oc = ed ? 'rgba(255,255,255,.22)' : (su.plateFill === 'light' ? 'rgba(0,0,0,.5)' : 'rgba(255,255,255,.5)');
-    s += '<rect x="' + (px / 2) + '" y="' + (px / 2) + '" width="' + (w - px) + '" height="' + (h - px) + '" fill="none" stroke="' + oc + '" stroke-width="' + px + '" pointer-events="none"/>';
+    const ins=ed?0:Math.max(0,(+su.frameInset||0)/10), ix=ins+px/2, iy=ins+px/2;
+    s += '<rect x="' + ix + '" y="' + iy + '" width="' + Math.max(0,w-2*ins-px) + '" height="' + Math.max(0,h-2*ins-px) + '" fill="none" stroke="' + oc + '" stroke-width="' + px + '" pointer-events="none"/>';
   }
   if (ed) s += selectionSVG(pl, sel, px);
   return s + '</svg>';
@@ -666,9 +667,11 @@ function initBeamer() {
     const view = deepMerge(DEFAULT_VIEW, B.view || {}), layout = normLayout(B.layout);
     document.body.style.background = su.bg;
     stage.style.background = su.bg;
+    const rot=((+su.outputRotation||0)%360+360)%360, rs=(rot===90||rot===270)?Math.min(W/H,H/W):1;
+    stage.style.transformOrigin='50% 50%'; stage.style.transform='rotate('+rot+'deg) scale('+rs+')';
     let html = '';
     const pids = platesOf(su);
-    if (!(c.active && c.step === 1)) {
+    if (!(c.active && c.step <= 4)) {
       for (const pid of pids) {
         const cs = cornersOf(su, pid).map(p => ({ x: p.x * W, y: p.y * H }));
         const P = su.plates[pid];
@@ -716,37 +719,16 @@ function calibPlateSVG(su, pid, K, c) {
   return s + '</svg>';
 }
 
-function calibOverlaySVG(su, c, W, H, pids) {
-  let s = '<svg class="bover" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">';
-  if (c.step === 1) {
-    const G=su.calibration||{}, sx=clamp(+(G.gridScaleX??G.gridScale)||.78,.2,.98), sy=clamp(+(G.gridScaleY??G.gridScale)||.78,.2,.98), gw=W*sx, gh=H*sy, cx=W/2+(+G.gridX||0), cy=H/2+(+G.gridY||0), x0=cx-gw/2,y0=cy-gh/2;
-    s+='<rect x="'+x0+'" y="'+y0+'" width="'+gw+'" height="'+gh+'" fill="rgba(255,255,255,.015)" stroke="#fff" stroke-width="5"/><line x1="'+x0+'" y1="'+cy+'" x2="'+(x0+gw)+'" y2="'+cy+'" stroke="#ff2d55" stroke-width="2"/><line x1="'+cx+'" y1="'+y0+'" x2="'+cx+'" y2="'+(y0+gh)+'" stroke="#64d2ff" stroke-width="2"/><circle cx="'+cx+'" cy="'+cy+'" r="10" fill="none" stroke="#ffd60a" stroke-width="3"/><text x="'+cx+'" y="'+Math.min(H-12,y0+gh+28)+'" fill="#fff" font-size="18" text-anchor="middle" font-weight="700">PROJEKTIONSBEREICH · vollständig sichtbar einpassen</text>';
-  } else if (c.step === 2) {
-    const q=Math.max(5,+c.sq||40), kx=W/su.area.w, ky=H/su.area.h, qw=q*kx, qh=q*ky, x=(W-qw)/2, y=(H-qh)/2;
-    s+='<rect x="'+x+'" y="'+y+'" width="'+qw+'" height="'+qh+'" fill="none" stroke="#ff9f0a" stroke-width="5"/><line x1="'+W/2+'" y1="'+(y-25)+'" x2="'+W/2+'" y2="'+(y+qh+25)+'" stroke="#64d2ff" stroke-width="2"/><line x1="'+(x-25)+'" y1="'+H/2+'" x2="'+(x+qw+25)+'" y2="'+H/2+'" stroke="#ff2d55" stroke-width="2"/><text x="'+W/2+'" y="'+(y+qh+34)+'" fill="#ff9f0a" font-size="22" text-anchor="middle" font-weight="700">MESSQUADRAT '+q+' × '+q+' cm</text>';
-  } else if (c.step === 3 || c.step === 4) {
-    for (const pid of pids) {
-      const cs = cornersOf(su, pid).map(p => ({ x: p.x * W, y: p.y * H }));
-      if(c.step===3){
-        const col=pid===c.plate?'#ff9f0a':'rgba(255,255,255,.45)', cen={x:cs.reduce((a,p)=>a+p.x,0)/4,y:cs.reduce((a,p)=>a+p.y,0)/4};
-        s+='<polygon points="'+cs.map(p=>p.x+','+p.y).join(' ')+'" fill="'+(pid===c.plate?'rgba(255,159,10,.08)':'none')+'" stroke="'+col+'" stroke-width="'+(pid===c.plate?5:2)+'"/>';
-        s+='<line x1="'+(cen.x-35)+'" y1="'+cen.y+'" x2="'+(cen.x+35)+'" y2="'+cen.y+'" stroke="'+col+'" stroke-width="3"/><line x1="'+cen.x+'" y1="'+(cen.y-35)+'" x2="'+cen.x+'" y2="'+(cen.y+35)+'" stroke="'+col+'" stroke-width="3"/><circle cx="'+cen.x+'" cy="'+cen.y+'" r="9" fill="none" stroke="'+col+'" stroke-width="3"/>';
-        s+='<text x="'+cen.x+'" y="'+(cen.y+58)+'" fill="'+col+'" font-size="20" text-anchor="middle" font-weight="700">PLATTE '+pid+' · '+su.plates[pid].w+' × '+su.plates[pid].h+' cm</text>';
-      }
-      cs.forEach((p, i) => {
-        if(c.step===3 && pid!==c.plate) return;
-        const act = c.step === 4 && c.plate === pid && (c.corner === i || c.corner === 4);
-        s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (act ? 14 : 9) + '" fill="' + (act ? '#ff9f0a' : 'none') + '" stroke="' + (act ? '#ff9f0a' : '#fff') + '" stroke-width="2"/>';
-        s += '<line x1="' + (p.x - 22) + '" y1="' + p.y + '" x2="' + (p.x + 22) + '" y2="' + p.y + '" stroke="' + (act ? '#ff9f0a' : '#fff') + '" stroke-width="1"/><line x1="' + p.x + '" y1="' + (p.y - 22) + '" x2="' + p.x + '" y2="' + (p.y + 22) + '" stroke="' + (act ? '#ff9f0a' : '#fff') + '" stroke-width="1"/>';
-      });
-    }
-  }
-  return s + '</svg>';
+function calibOverlaySVG(su,c,W,H,pids){
+  let s='<svg class="bover" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">';
+  const center=(pid)=>{const p=su.plates[pid];return {x:((+p.x||0)+p.w/2)/su.area.w*W,y:((+p.y||0)+p.h/2)/su.area.h*H};};
+  const cross=(p,col,label)=>'<line x1="'+(p.x-55)+'" y1="'+p.y+'" x2="'+(p.x+55)+'" y2="'+p.y+'" stroke="'+col+'" stroke-width="4"/><line x1="'+p.x+'" y1="'+(p.y-55)+'" x2="'+p.x+'" y2="'+(p.y+55)+'" stroke="'+col+'" stroke-width="4"/><circle cx="'+p.x+'" cy="'+p.y+'" r="9" fill="none" stroke="#fff" stroke-width="3"/><text x="'+p.x+'" y="'+(p.y+82)+'" fill="'+col+'" font-size="20" text-anchor="middle" font-weight="700">'+label+'</text>';
+  if(c.step===1){s+='<line x1="'+W/2+'" y1="20" x2="'+W/2+'" y2="'+(H-20)+'" stroke="#64d2ff" stroke-width="2"/><line x1="20" y1="'+H/2+'" x2="'+(W-20)+'" y2="'+H/2+'" stroke="#ff2d55" stroke-width="2"/><text x="'+W/2+'" y="'+(H-30)+'" fill="#fff" font-size="20" text-anchor="middle">Beamer-Arbeitsbereich prüfen</text>';}
+  else if(c.step===2){s+=cross(center('L'),'#ff9f0a','MITTE · PLATTE LINKS');}
+  else if(c.step===3){const p=center('L'),q=Math.max(5,+c.sq||20),qw=q*W/su.area.w,qh=q*H/su.area.h;s+=cross(p,'#64d2ff','MITTELPUNKT');s+='<rect x="'+(p.x-qw/2)+'" y="'+(p.y-qh/2)+'" width="'+qw+'" height="'+qh+'" fill="none" stroke="#ff9f0a" stroke-width="5"/><text x="'+p.x+'" y="'+(p.y+qh/2+30)+'" fill="#ff9f0a" font-size="21" text-anchor="middle" font-weight="700">'+q+' × '+q+' cm · messen</text>';}
+  else if(c.step===4){const pid=su.twoPlates?'R':'L';s+=cross(center(pid),'#30d158',su.twoPlates?'MITTE · PLATTE RECHTS':'MITTE · PLATTE');}
+  return s+'</svg>';
 }
-
-/* ================= STEUERFENSTER ================= */
-let setup, S, bc = null, lsTimer = null, toastT = null;
-
 function P() { return S.layout.plates[S.plate]; }
 function dims() { return setup.plates[S.plate]; }
 function selObjs() {
@@ -1307,6 +1289,12 @@ const ACT = {
   calStep(n) { S.calib.step = clamp(+n, 1, 5); syncLive(true); renderCalib(); },
   calPlate(p) { S.calib.plate = p; syncLive(true); renderCalib(); },
   calRoughStep(v) { S.calib.roughStep=+v; renderCalib(); },
+  calSquareSize(v){S.calib.sq=+v;syncLive(true);renderCalib();},
+  calCenterNudge(a){
+    const [pid,dx,dy]=a.split(','),p=setup.plates[pid],st=+S.calib.roughStep||0.5;
+    p.corners=null;p.x=r2((+p.x||0)+(+dx)*st);p.y=r2((+p.y||0)+(+dy)*st);
+    saveSetup();syncLive(true);renderCalib();
+  },
   calRoughNudge(a) {
     const [dx,dy]=a.split(',').map(Number), p=setup.plates[S.calib.plate], st=+S.calib.roughStep||0.5;
     p.corners=null; p.x=r2((+p.x||0)+dx*st); p.y=r2((+p.y||0)+dy*st);
@@ -1351,9 +1339,11 @@ const ACT = {
   calGlobalMeasure() {
     const q=Math.max(5,+S.calib.sq||20), mw=+($('#mW')||{}).value, mh=+($('#mH')||{}).value;
     if(!(mw>0&&mh>0))return toast('Breite und Höhe des Messquadrats eingeben');
-    setup.area.w=r2(setup.area.w*(mw/q)); setup.area.h=r2(setup.area.h*(mh/q));
-    setup.plates.L.corners=null; setup.plates.R.corners=null;
-    normalizePlates(); saveSetup(); syncLive(true); renderCalib();
+    const ow=setup.area.w,oh=setup.area.h,centers={};
+    for(const pid of ['L','R']){const p=setup.plates[pid];centers[pid]={x:((+p.x||0)+p.w/2)/ow,y:((+p.y||0)+p.h/2)/oh};}
+    setup.area.w=r2(ow*(mw/q)); setup.area.h=r2(oh*(mh/q));
+    for(const pid of ['L','R']){const p=setup.plates[pid];p.corners=null;p.x=r2(centers[pid].x*setup.area.w-p.w/2);p.y=r2(centers[pid].y*setup.area.h-p.h/2);}
+    saveSetup(); syncLive(true); renderCalib();
     toast('Globaler Maßstab korrigiert – Quadrat erneut messen');
   },
   calMeasure() {
@@ -1446,6 +1436,8 @@ function renderSettings() {
     '<input type="color" class="sw" data-set="bg" value="' + setup.bg + '" title="Eigene Farbe"></div>' +
     '<div class="lab">Plattenfläche</div><div style="margin-bottom:14px">' + segSet('plateFill', [['dark', 'Dunkel, nur Linien leuchten'], ['light', 'Hell ausgeleuchtet']]) + '</div>' +
     '<label class="chk" style="margin-bottom:14px"><input type="checkbox" data-set="outline"' + (setup.outline ? ' checked' : '') + '> Plattenrand projizieren</label>' +
+    '<div class="fg" style="margin-bottom:14px">'+fld('Rahmen nach innen (mm)','frameInset',0.5,0)+'</div>'+
+    '<div class="lab">Beamerbild drehen</div><div style="margin-bottom:14px">'+segSet('outputRotation', [[0,'0°'],[90,'90°'],[180,'180°'],[270,'270°']])+'</div><p class="hint" style="margin-top:-8px;margin-bottom:14px">Dreht nur die komplette Beamer-Ausgabe. Maßstab und Objektkoordinaten bleiben unverändert.</p>' +
     '<div class="fg"><div class="f"><label>Rasterabstand</label><select class="inp" data-set="gridSize">' + [0.5,1,2,5].map(v=>'<option value="'+v+'"'+(+setup.gridSize===v?' selected':'')+'>'+fmt(v)+' cm</option>').join('') + '</select></div>'+
     '<div class="f"><label>Starke Rasterlinie alle</label><select class="inp" data-set="gridMajor">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridMajor===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
     '<div class="f"><label>Maßzahl anzeigen alle</label><select class="inp" data-set="gridLabelEvery">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridLabelEvery===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
@@ -1493,40 +1485,24 @@ function renderSettings() {
 /* ---------- Kalibrierung ---------- */
 function renderCalib() {
   const c=S.calib,st=c.step,two=setup.twoPlates,bs=S.beamerSize;
-  const steps=[[1,'Beamer'],[2,'Maßstab'],[3,'Platte finden'],[4,'Feinlage'],[5,'Kontrolle']];
+  const steps=[[1,'Beamer'],[2,'Mitte links'],[3,'Maßstab'],[4,two?'Mitte rechts':'Position'],[5,'Kontrolle']];
   $('#calibHead').innerHTML='<h2>Kalibrierung</h2><div class="seg">'+steps.map(([n,l])=>'<button class="'+(st===n?'on':'')+'" data-act="calStep" data-arg="'+n+'">'+n+'. '+l+'</button>').join('')+'</div>';
-  const plateSeg=two?'<div class="seg" style="margin-bottom:14px"><button class="'+(c.plate==='L'?'on':'')+'" data-act="calPlate" data-arg="L">Platte links</button><button class="'+(c.plate==='R'?'on':'')+'" data-act="calPlate" data-arg="R">Platte rechts</button></div>':'';
   let h='';
+  const pad=(pid)=>'<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap"><div><div class="lab">Fadenkreuz verschieben</div><div class="pad"><span></span><button data-act="calCenterNudge" data-arg="'+pid+',0,-1">↑</button><span></span><button data-act="calCenterNudge" data-arg="'+pid+',-1,0">←</button><button data-act="calCenterNudge" data-arg="'+pid+',0,1">↓</button><button data-act="calCenterNudge" data-arg="'+pid+',1,0">→</button></div></div><div><div class="lab">Schrittweite</div><div class="seg">'+[0.1,0.5,1,5].map(v=>'<button class="'+(c.roughStep===v?'on':'')+'" data-act="calRoughStep" data-arg="'+v+'">'+String(v).replace('.',',')+' cm</button>').join('')+'</div></div></div>';
   if(st===1){
-    h+='<div class="card"><h4>Projektionsbereich sichtbar einpassen</h4><p class="hint">Hier geht es noch nicht um Zentimeter. Passe den weißen Rahmen so an, dass er vollständig sichtbar ist und den gewünschten Arbeitsbereich abdeckt. Danach wird erst der Maßstab gemessen.</p>'+
-      '<div class="fg">'+fld('Breite des Rahmens','calibration.gridScaleX',0.01,0.2)+fld('Höhe des Rahmens','calibration.gridScaleY',0.01,0.2)+fld('Position X (px)','calibration.gridX',1)+fld('Position Y (px)','calibration.gridY',1)+'</div>'+
-      '<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap;margin-top:14px"><div><div class="lab">Rahmen verschieben</div><div class="pad"><span></span><button data-act="calFrameMove" data-arg="0,-10">↑</button><span></span><button data-act="calFrameMove" data-arg="-10,0">←</button><button data-act="calFrameMove" data-arg="0,10">↓</button><button data-act="calFrameMove" data-arg="10,0">→</button></div></div>'+
-      '<div><div class="lab">Größe</div><div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="calFrameSize" data-arg="-0.03,0">schmaler</button><button class="btn sm" data-act="calFrameSize" data-arg="0.03,0">breiter</button><button class="btn sm" data-act="calFrameSize" data-arg="0,-0.03">flacher</button><button class="btn sm" data-act="calFrameSize" data-arg="0,0.03">höher</button></div><div class="row" style="margin-top:8px"><button class="btn sm" data-act="calFrameSize" data-arg="-0.03,-0.03">insgesamt kleiner</button><button class="btn sm" data-act="calFrameSize" data-arg="0.03,0.03">insgesamt größer</button></div></div></div></div>';
+    h+='<div class="card"><h4>Beamer ausrichten</h4><p class="hint">Prüfe nur, ob der benötigte Arbeitsbereich vollständig vom Projektor erfasst wird. Der Maßstab wird erst später festgelegt.</p><div class="lab">Beamerbild drehen</div>'+segSet('outputRotation',[[0,'0°'],[90,'90°'],[180,'180°'],[270,'270°']])+'</div>';
   } else if(st===2){
-    const q=Math.max(5,+c.sq||20);
-    h+='<div class="card"><h4>Maßstab mit Messquadrat festlegen</h4><p class="hint">Jetzt wird unabhängig von den Platten ein Quadrat projiziert. Miss seine reale Breite und Höhe. Die Software korrigiert daraus X- und Y-Maßstab der gesamten Projektionsfläche.</p>'+
-      '<div class="fg"><div class="f"><label>Sollgröße Messquadrat (cm)</label><input class="inp" type="number" min="5" step="1" data-cal="sq" value="'+q+'"></div><div class="f"><label>Real gemessene Breite (cm)</label><input class="inp" id="mW" type="number" min="1" step="0.1" placeholder="z. B. 49,6"></div><div class="f"><label>Real gemessene Höhe (cm)</label><input class="inp" id="mH" type="number" min="1" step="0.1" placeholder="z. B. 49,2"></div></div>'+
-      '<div style="margin-top:14px"><button class="btn primary" data-act="calGlobalMeasure">Maßstab übernehmen</button></div><p class="hint" style="margin-top:12px">Danach wird dasselbe Quadrat erneut angezeigt. Es sollte dann real '+fmt(q)+' × '+fmt(q)+' cm messen.</p></div>'+
-      '<div class="card"><h4>Aktuelle Projektionsfläche</h4><div class="kv"><span>Breite</span><b>'+fmt(setup.area.w)+' cm</b></div><div class="kv"><span>Höhe</span><b>'+fmt(setup.area.h)+' cm</b></div><div class="kv"><span>Beamer</span><b>'+bs.w+' × '+bs.h+' px</b></div></div>';
+    h+='<div class="card"><h4>Mittelpunkt der linken Platte setzen</h4><p class="hint">Miss den Mittelpunkt der echten linken Platte und schiebe das projizierte Fadenkreuz exakt darauf. Noch keine Größe anpassen.</p>'+pad('L')+'</div>';
   } else if(st===3){
-    const p=setup.plates[c.plate];
-    h+='<div class="card"><h4>Echte Platte finden</h4><p class="hint">Der Maßstab ist jetzt fest. Gib die reale Plattengröße ein. Der projizierte Rahmen hat damit dieselbe reale Größe und wird nur noch auf die echte Platte geschoben.</p>'+
-      '<label class="chk" style="margin-bottom:14px"><input type="checkbox" data-set="twoPlates"'+(two?' checked':'')+'> Zweite Platte (Doppelplattenpresse)</label>'+plateSeg+
-      '<div class="fg" style="margin-bottom:14px">'+fld('Plattenbreite (cm)','plates.'+c.plate+'.w',0.5,5)+fld('Plattenhöhe (cm)','plates.'+c.plate+'.h',0.5,5)+'</div>'+
-      '<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap"><div><div class="lab">Platte verschieben</div><div class="pad"><span></span><button data-act="calRoughNudge" data-arg="0,-1">↑</button><span></span><button data-act="calRoughNudge" data-arg="-1,0">←</button><button data-act="calRoughNudge" data-arg="0,1">↓</button><button data-act="calRoughNudge" data-arg="1,0">→</button></div></div><div><div class="lab">Schrittweite</div><div class="seg">'+[0.1,0.5,1,5].map(v=>'<button class="'+(c.roughStep===v?'on':'')+'" data-act="calRoughStep" data-arg="'+v+'">'+String(v).replace('.',',')+' cm</button>').join('')+'</div><p class="hint" style="margin-top:10px">Position: X '+fmt(p.x)+' cm · Y '+fmt(p.y)+' cm</p></div></div>'+
-      (two?'<hr><div class="fg" style="margin-top:14px">'+fld('Freier Abstand zwischen den Platten (cm)','gap',0.5,0)+'</div>':'')+
-      '<div style="margin-top:14px"><button class="btn sm" data-act="calCenterPlate">Platte im Beamerbild zentrieren</button></div></div>';
+    const q=Math.max(5,+c.sq||20);
+    h+='<div class="card"><h4>Maßstab am Mittelpunkt messen</h4><p class="hint">Das Quadrat bleibt um den eben gesetzten Mittelpunkt. Wähle eine passende Größe, miss die tatsächlich projizierte Breite und Höhe und trage beide Werte ein.</p><div class="lab">Quadratgröße</div><div class="seg">'+[[10,'Size 1 · 10 cm'],[20,'Size 2 · 20 cm'],[30,'Size 3 · 30 cm']].map(([v,l])=>'<button class="'+(q===v?'on':'')+'" data-act="calSquareSize" data-arg="'+v+'">'+l+'</button>').join('')+'</div><div class="fg" style="margin-top:14px"><div class="f"><label>Real gemessene Breite (cm)</label><input class="inp" id="mW" type="number" min="1" step="0.1"></div><div class="f"><label>Real gemessene Höhe (cm)</label><input class="inp" id="mH" type="number" min="1" step="0.1"></div></div><button class="btn primary" style="margin-top:14px" data-act="calGlobalMeasure">Maßstab übernehmen</button><p class="hint" style="margin-top:10px">Sollmaß: '+q+' × '+q+' cm · Projektionsfläche aktuell '+fmt(setup.area.w)+' × '+fmt(setup.area.h)+' cm</p></div>';
   } else if(st===4){
-    const cn=[['↖',0],['↗',1],['↙',3],['↘',2]];
-    h+='<div class="calgrid"><div><div class="card"><h4>Feinlage der Platte</h4><p class="hint">Nur falls nötig: Setze die Ecken exakt auf die echten Plattenkanten. Wenn der Beamer sauber ausgerichtet ist, sollte hier nur eine kleine Korrektur nötig sein.</p>'+plateSeg+
-      '<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap"><div><div class="lab">Ecke</div><div class="corners">'+cn.map(([g,i])=>'<button class="'+(c.corner===i?'on':'')+'" data-act="calCorner" data-arg="'+i+'">'+g+'</button>').join('')+'<button class="all'+(c.corner===4?' on':'')+'" data-act="calCorner" data-arg="4">Ganze Platte</button></div></div><div><div class="lab">Verschieben</div><div class="pad"><span></span><button data-act="calNudge" data-arg="0,-1">↑</button><span></span><button data-act="calNudge" data-arg="-1,0">←</button><button data-act="calNudge" data-arg="0,1">↓</button><button data-act="calNudge" data-arg="1,0">→</button></div></div></div>'+
-      '<div class="lab" style="margin-top:14px">Schrittweite</div><div class="seg">'+[1,5,20].map(v=>'<button class="'+(c.nudge===v?'on':'')+'" data-act="calNudgeStep" data-arg="'+v+'">'+v+' px</button>').join('')+'</div><div style="margin-top:14px"><button class="btn sm" data-act="calResetCorners">Ecken zurücksetzen</button></div></div></div><div><div class="card"><h4>Beamer-Bild</h4><svg class="mini" id="mini"></svg></div></div></div>';
+    const pid=two?'R':'L';
+    h+='<div class="card"><h4>'+(two?'Mittelpunkt der rechten Platte setzen':'Plattenposition kontrollieren')+'</h4><p class="hint">'+(two?'Der Maßstab bleibt unverändert. Schiebe nur das Fadenkreuz auf den ausgemessenen Mittelpunkt der rechten Platte.':'Der Maßstab ist fest. Kontrolliere den Mittelpunkt der Platte.')+'</p>'+pad(pid)+'</div>';
   } else {
-    h+='<div class="card"><h4>Kalibrierung kontrollieren</h4><p class="hint">Die Platte wird jetzt mit Rahmen, Mittelpunkt und Raster angezeigt. Prüfe mit dem Lineal einige Abstände. Wenn alles passt, ist die Kalibrierung abgeschlossen.</p>'+plateSeg+'<div class="kv"><span>Platte</span><b>'+fmt(setup.plates[c.plate].w)+' × '+fmt(setup.plates[c.plate].h)+' cm</b></div><div class="kv"><span>Projektionsfläche</span><b>'+fmt(setup.area.w)+' × '+fmt(setup.area.h)+' cm</b></div></div>';
+    h+='<div class="card"><h4>Kalibrierung kontrollieren</h4><p class="hint">Jetzt werden die Platten mit dem kalibrierten Maßstab angezeigt. Die obere Plattenkante bleibt Y = 0; nach unten in der Darstellung geht es zu dir. Der sichtbare Rand kann rein optisch nach innen versetzt werden, ohne den Maßstab zu verändern.</p><div class="fg">'+fld('Rahmen nach innen (mm)','frameInset',0.5,0)+'</div><div class="lab" style="margin-top:14px">Beamerbild drehen</div>'+segSet('outputRotation',[[0,'0°'],[90,'90°'],[180,'180°'],[270,'270°']])+'<p class="hint" style="margin-top:12px">Diese Drehung betrifft nur die komplette Ausgabe, nicht die gespeicherten Maße oder Positionen.</p></div>';
   }
   $('#calibBody').innerHTML=h;
-  $('#calibFoot').innerHTML=(st>1?'<button class="btn" data-act="calStep" data-arg="'+(st-1)+'">Zurück</button>':'')+'<button class="btn" data-act="openBeamer">Beamer öffnen</button><span class="spacer"></span>'+(st<5?'<button class="btn primary" data-act="calStep" data-arg="'+(st+1)+'">Weiter</button>':'')+'<button class="btn '+(st===5?'primary':'')+'" data-act="closeCalib">Fertig</button>';
-  if(st===4)drawMini();
 }
 function drawMini() {
   const svg = $('#mini'); if (!svg) return;
