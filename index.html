@@ -100,9 +100,13 @@ textarea,input[type=text],input[type=number]{user-select:text;-webkit-user-selec
 .slider{display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .slider>button{width:40px;height:40px;border-radius:10px;background:var(--fill);font-size:19px;flex-shrink:0}
 .slider>button:active{background:var(--accent-soft)}
-input[type=range]{flex:1;accent-color:var(--accent);height:30px;min-width:0}
+.rangebox{position:relative;flex:1;min-width:0;height:36px;display:flex;align-items:center}
+.rangebox input[type=range]{width:100%;accent-color:var(--accent);height:30px;min-width:0}
+.touch-range-thumb{display:none}
 @media (pointer:coarse){
-  .slider input[type=range]{pointer-events:none;opacity:.62}
+  .rangebox input[type=range]{pointer-events:none;opacity:.46}
+  .touch-range-thumb{display:block;position:absolute;top:50%;left:var(--thumb-left,50%);width:30px;height:30px;border-radius:50%;transform:translate(-50%,-50%);background:#fff;border:3px solid var(--accent);box-shadow:0 1px 5px rgba(0,0,0,.18);pointer-events:auto;touch-action:none;z-index:2}
+  .touch-range-thumb:active{transform:translate(-50%,-50%) scale(1.08)}
   .slider>button{width:44px;height:44px}
 }
 .inp{width:100%;background:var(--fill);border:1px solid transparent;border-radius:var(--rs);padding:8px 10px;font-size:14px;outline:none;min-height:38px}
@@ -984,9 +988,11 @@ function renderDock() {
 }
 
 function sliderRow(label, prop, val, min, max, step, unit, roId) {
+  const pct = max>min ? clamp((val-min)/(max-min)*100,0,100) : 0;
   return '<div class="lab">' + label + '<b data-ro="' + (roId || prop) + '">' + fmt(val) + (unit ? ' ' + unit : '') + '</b></div>' +
     '<div class="slider"><button data-act="bump" data-arg="' + prop + ',-1">−</button>' +
-    '<input type="range" data-p="' + prop + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '">' +
+    '<div class="rangebox"><input type="range" data-p="' + prop + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '">' +
+    '<span class="touch-range-thumb" data-touch-range style="--thumb-left:' + pct + '%" aria-hidden="true"></span></div>' +
     '<button data-act="bump" data-arg="' + prop + ',1">+</button></div>';
 }
 function colorRow(cur) {
@@ -1112,6 +1118,12 @@ function inspMulti(sel) {
   h += actionsHTML([['deselect', '', '○', 'Aufheben'], ['del', '', '✕', 'Alle löschen', 'danger']]);
   return h;
 }
+function syncTouchThumb(range){
+  if(!range || range.type!=='range')return;
+  const box=range.closest('.rangebox'),thumb=box&&box.querySelector('[data-touch-range]');if(!thumb)return;
+  const min=+range.min||0,max=+range.max||100,v=+range.value||0,p=max>min?clamp((v-min)/(max-min)*100,0,100):0;
+  thumb.style.setProperty('--thumb-left',p+'%');
+}
 function updateReadouts(activeEl) {
   const s = one(); if (!s) return;
   const o = s.o;
@@ -1119,6 +1131,7 @@ function updateReadouts(activeEl) {
     if (el === activeEl || el.dataset.p === 'name') return;
     const pk=el.dataset.p, v=pk==='displayPos'?lineDisplayPos(o):o[pk]; if (v == null) return;
     if (el.type === 'color' || el.tagName==='SELECT' || el.type==='text' || el.tagName==='TEXTAREA') el.value = v; else el.value = el.type === 'range' ? v : r2(v);
+    if(el.type==='range') syncTouchThumb(el);
   });
   document.querySelectorAll('#insp [data-ro]').forEach(el => {
     const k = el.dataset.ro;
@@ -1817,7 +1830,7 @@ function propInput(el, final) {
   else if (k === 'pos') moveLine(o, v - o.pos);
   else if (k === 'displayPos') { const np=lineInternalPos(o,v); moveLine(o,np-o.pos); }
   else if (k === 'stroke') o.stroke = clamp(Math.round(v), 1, 20);
-  renderCanvas(); updateReadouts(el);
+  renderCanvas(); if(el.type==='range')syncTouchThumb(el); updateReadouts(el);
   if (final) { commit(); renderSide(); updateReadouts(); } else syncLive();
 }
 function setInput(el, final) {
@@ -1883,6 +1896,31 @@ function bindGlobal() {
     if (fn) fn(b.dataset.arg, b, e);
     if (b.closest('#morePop,#addPop')) closePops();
   });
+  document.addEventListener('pointerdown', e => {
+    const thumb=e.target.closest&&e.target.closest('[data-touch-range]'); if(!thumb)return;
+    const box=thumb.closest('.rangebox'),range=box&&box.querySelector('input[type="range"]'); if(!range)return;
+    e.preventDefault(); e.stopPropagation();
+    const min=+range.min||0,max=+range.max||100,step=Math.max(0,+range.step||0);
+    const setFromX=x=>{
+      const rect=box.getBoundingClientRect(),pad=15,left=rect.left+pad,right=rect.right-pad;
+      const t=clamp((x-left)/Math.max(1,right-left),0,1);
+      let v=min+t*(max-min);
+      if(step>0)v=min+Math.round((v-min)/step)*step;
+      v=clamp(v,min,max);
+      range.value=String(r2(v)); syncTouchThumb(range); propInput(range,false);
+    };
+    try{thumb.setPointerCapture(e.pointerId);}catch(_){}
+    const move=ev=>{ if(ev.pointerId!==e.pointerId)return; ev.preventDefault(); setFromX(ev.clientX); };
+    const up=ev=>{
+      if(ev.pointerId!==e.pointerId)return;
+      thumb.removeEventListener('pointermove',move);thumb.removeEventListener('pointerup',up);thumb.removeEventListener('pointercancel',up);
+      try{thumb.releasePointerCapture(e.pointerId);}catch(_){}
+      propInput(range,true);
+    };
+    thumb.addEventListener('pointermove',move);
+    thumb.addEventListener('pointerup',up);
+    thumb.addEventListener('pointercancel',up);
+  },true);
   document.addEventListener('input', e => {
     const el = e.target;
     if (el.dataset.p) propInput(el, false);
