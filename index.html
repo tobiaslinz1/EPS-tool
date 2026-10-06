@@ -225,16 +225,26 @@ details.grp>.gb{padding-bottom:16px}
 .settings-intro{background:linear-gradient(180deg,#fff,var(--fill));border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px}
 .settings-intro b{display:block;font-size:15px;margin-bottom:3px}
 .settings-intro span{font-size:12.5px;color:var(--text2);line-height:1.45}
-.settings-section{background:#fff;border:1px solid var(--line);border-radius:16px;margin-bottom:12px;overflow:hidden}
-.settings-section>summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:650;user-select:none}
+.settings-section{background:#fff;border:1px solid var(--line);border-radius:15px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.025)}
+.settings-section>summary{list-style:none;cursor:pointer;padding:13px 15px;display:flex;align-items:center;gap:10px;font-size:14.5px;font-weight:650;user-select:none;background:#fff}
+.settings-section[open]>summary{background:linear-gradient(180deg,#fff,#fbfbfc)}
 .settings-section>summary::-webkit-details-marker{display:none}
 .settings-section>summary:after{content:'›';margin-left:auto;color:var(--text2);font-size:22px;line-height:1;transform:rotate(90deg);transition:transform .15s}
 .settings-section[open]>summary:after{transform:rotate(-90deg)}
 .settings-section>summary small{display:block;font-size:11.5px;font-weight:450;color:var(--text2);margin-top:2px}
-.settings-section .settings-body{border-top:1px solid var(--line);padding:14px 16px}
-.settings-sub{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 8px}
+.settings-section .settings-body{border-top:1px solid var(--line);padding:14px 15px 15px;background:#fcfcfd}
+.settings-sub{font-size:11.5px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.055em;margin:16px 0 8px}
 .settings-sub:first-child{margin-top:0}
-.settings-note{font-size:12px;color:var(--text2);line-height:1.45;background:var(--fill);border-radius:10px;padding:9px 10px;margin-top:10px}
+.settings-note{font-size:12px;color:var(--text2);line-height:1.5;background:var(--fill);border:1px solid var(--line);border-radius:10px;padding:10px 11px;margin-top:10px}
+.settings-section .f{min-width:0}
+.settings-section .f label{display:block;margin-bottom:5px;font-size:12px;color:var(--text2);font-weight:550}
+.settings-section select.inp{background:#fff;border-color:var(--line);min-height:40px}
+.settings-section input.inp[type=number],.settings-section input.inp[type=text]{background:#fff;border-color:var(--line);min-height:40px}
+.settings-section .fg{gap:10px}
+.outer-guide-row{display:grid;grid-template-columns:minmax(0,1fr) auto 38px;gap:8px;align-items:center;padding:8px 9px;border:1px solid var(--line);border-radius:11px;background:#fff;margin:7px 0}
+.outer-guide-row .inp{margin:0}
+.settings-preview{border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px;margin-top:12px}
+.settings-preview-title{font-size:11.5px;color:var(--text2);font-weight:650;margin-bottom:8px}
 .settings-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:8px 0;border-bottom:1px solid var(--line)}
 .settings-toggle:last-child{border-bottom:0}
 .settings-toggle span{font-size:13.5px;font-weight:550}
@@ -621,22 +631,30 @@ function outerGuidesSVG(w,h,su,px){
   return s;
 }
 function infoDimsSVG(pl,w,h,px,su){
-  const I=(su&&su.infoDims)||{},c=I.color||'#ff2d95',sw=Math.max(.5,+I.stroke||1.25)*px,fs=Math.max(8,+I.font||13)*px,cx=w/2,tick=Math.max(3*px,.18);
+  const I=(su&&su.infoDims)||{}, col=I.color||'#ff2d95', fsPx=Math.max(9,+I.font||13), swPx=Math.max(1,+I.stroke||1.25);
+  const fs=fsPx*px, sw=swPx*px, tick=Math.max(4*px,.18), cx=w/2;
   let s='';
-  for(const o of pl.shapes){
-    const x=o.x,y=o.y,bb=rotBBox(o),xdim=Math.min(h-.7,Math.max(.7,y+bb.h/2+Math.max(.7,8*px))),xv=r2(x-cx),yv=r2(h-y);
-    const vx=Math.min(w-.7,Math.max(.7,x+bb.w/2+Math.max(.7,8*px)));
-    s+='<g pointer-events="none">';
-    if(Math.abs(x-cx)>.01){
-      s+='<line x1="'+cx+'" y1="'+xdim+'" x2="'+x+'" y2="'+xdim+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
-      s+='<line x1="'+cx+'" y1="'+(xdim-tick)+'" x2="'+cx+'" y2="'+(xdim+tick)+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
-      s+='<line x1="'+x+'" y1="'+(xdim-tick)+'" x2="'+x+'" y2="'+(xdim+tick)+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
-      s+='<text x="'+((cx+x)/2)+'" y="'+(xdim-Math.max(.25,3*px))+'" fill="'+c+'" font-size="'+fs+'" text-anchor="middle" font-weight="600" style="stroke:none">X '+(xv>0?'+':'')+fmt(xv)+' cm</text>';
-    }
-    s+='<line x1="'+vx+'" y1="'+h+'" x2="'+vx+'" y2="'+y+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
-    s+='<line x1="'+(vx-tick)+'" y1="'+h+'" x2="'+(vx+tick)+'" y2="'+h+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
-    s+='<line x1="'+(vx-tick)+'" y1="'+y+'" x2="'+(vx+tick)+'" y2="'+y+'" stroke="'+c+'" stroke-width="'+sw+'"/>';
-    s+='<text x="'+(vx+Math.max(.3,4*px))+'" y="'+((h+y)/2)+'" fill="'+c+'" font-size="'+fs+'" dominant-baseline="middle" font-weight="600" style="stroke:none">Y '+fmt(yv)+' cm</text>';
+  const objs=(pl.shapes||[]);
+  for(const o of objs){
+    const bb=rotBBox(o),x=o.x,y=o.y,left=x-bb.w/2,right=x+bb.w/2,top=y-bb.h/2,bottom=y+bb.h/2;
+    const xv=r2(x-cx), yv=r2(h-y);
+    const yDim=clamp(bottom+Math.max(.8,10*px),.8,h-.8);
+    const xDim=clamp(right+Math.max(.8,10*px),.8,w-.8);
+    s+='<g pointer-events="none" opacity="1">';
+    // X from platen center
+    s+='<line x1="'+cx+'" y1="'+yDim+'" x2="'+x+'" y2="'+yDim+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
+    s+='<line x1="'+cx+'" y1="'+(yDim-tick)+'" x2="'+cx+'" y2="'+(yDim+tick)+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
+    s+='<line x1="'+x+'" y1="'+(yDim-tick)+'" x2="'+x+'" y2="'+(yDim+tick)+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
+    s+='<rect x="'+((cx+x)/2-Math.max(1.4,18*px))+'" y="'+(yDim-Math.max(1.15,15*px))+'" width="'+Math.max(2.8,36*px)+'" height="'+Math.max(1.0,14*px)+'" rx="'+Math.max(.2,3*px)+'" fill="#fff" opacity=".92"/>';
+    s+='<text x="'+((cx+x)/2)+'" y="'+(yDim-Math.max(.45,6*px))+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" font-weight="700" style="stroke:none">X '+(xv>0?'+':'')+fmt(xv)+' cm</text>';
+    // Y from front/body edge
+    s+='<line x1="'+xDim+'" y1="'+h+'" x2="'+xDim+'" y2="'+y+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
+    s+='<line x1="'+(xDim-tick)+'" y1="'+h+'" x2="'+(xDim+tick)+'" y2="'+h+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
+    s+='<line x1="'+(xDim-tick)+'" y1="'+y+'" x2="'+(xDim+tick)+'" y2="'+y+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
+    s+='<rect x="'+(xDim+Math.max(.25,3*px))+'" y="'+((h+y)/2-Math.max(.5,7*px))+'" width="'+Math.max(3.5,44*px)+'" height="'+Math.max(1.0,14*px)+'" rx="'+Math.max(.2,3*px)+'" fill="#fff" opacity=".92"/>';
+    s+='<text x="'+(xDim+Math.max(.45,6*px))+'" y="'+((h+y)/2)+'" fill="'+col+'" font-size="'+fs+'" dominant-baseline="middle" font-weight="700" style="stroke:none">Y '+fmt(yv)+' cm</text>';
+    // Object size, subtle technical cue
+    s+='<text x="'+x+'" y="'+clamp(top-Math.max(.5,6*px),.8,h-.8)+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" font-weight="650" style="stroke:none">'+fmt(o.w)+' × '+fmt(o.h)+' cm</text>';
     s+='</g>';
   }
   return s;
@@ -680,8 +698,8 @@ function plateSVG(pl, su, view, pid, K, o) {
   if (view.outerGuides) s += outerGuidesSVG(w,h,su,projPx);
   if (pl.info && pl.info.text) s += infoSVG(pl.info, w, h);
   for (const sh of pl.shapes) s += shapeSVG(sh, projPx, ed);
-  if (view.infoDims) s += infoDimsSVG(pl,w,h,projPx,su);
   for (const ln of pl.lines) s += lineSVG(ln, w, h, projPx, ed, sel.includes('l' + ln.id), view, (su.outerGuides||{}).extend, su, px);
+  if (view.infoDims) s += infoDimsSVG(pl,w,h,ed?px:projPx,su);
   if (ed || su.outline) {
     const oc = ed ? 'rgba(255,255,255,.22)' : (su.plateFill === 'light' ? 'rgba(0,0,0,.5)' : 'rgba(255,255,255,.5)');
     const ins=ed?0:Math.max(0,(+su.frameInset||0)/10), ix=ins+px/2, iy=ins+px/2;
@@ -1344,7 +1362,8 @@ const ACT = {
   view(k) {
     S.view[k] = !S.view[k];
     if (k === 'lockLines') toast(S.view.lockLines ? 'Alle Linien gesperrt' : 'Linien wieder beweglich');
-    persist(); renderDock(); renderCanvas(); renderTop(); if ($('#settings').classList.contains('open')) renderSettings();
+    if (k === 'infoDims') toast(S.view.infoDims ? 'Info-Bemaßung eingeschaltet' : 'Info-Bemaßung ausgeschaltet');
+    persist(); syncLive(true); renderDock(); renderCanvas(); renderTop(); renderGuides(); if ($('#settings').classList.contains('open')) renderSettings();
   },
   multi() { S.multi = !S.multi; renderDock(); toast(S.multi ? 'Mehrfachauswahl: Objekte nacheinander antippen' : 'Mehrfachauswahl aus'); },
   zoom(a) { a = +a; S.zoom = a === 0 ? 1 : clamp(r2(S.zoom + a * 0.25), 0.5, 4); renderDock(); renderCanvas(); },
@@ -1578,8 +1597,8 @@ function fld(label, path, step, min) {
   return '<div class="f"><label>' + label + '</label><input class="inp" type="number" step="' + (step || 0.1) + '"' + (min != null ? ' min="' + min + '"' : '') + ' data-set="' + path + '" value="' + v + '"></div>';
 }
 function quickFld(label,path,vals,step,min,unit){
-  const cur=getDeep(setup,path);
-  return '<div class="f"><label>'+label+'</label><div class="seg full" style="margin-bottom:7px">'+vals.map(v=>'<button class="'+(Math.abs((+cur)-v)<1e-6?'on':'')+'" data-act="setv" data-arg="'+path+'='+v+'">'+v+(unit||'')+'</button>').join('')+'</div><input class="inp" type="number" step="'+(step||1)+'"'+(min!=null?' min="'+min+'"':'')+' data-set="'+path+'" value="'+cur+'" inputmode="decimal"></div>';
+  const cur=+getDeep(setup,path), all=Array.from(new Set(vals.concat([cur]))).filter(v=>isFinite(+v)).sort((a,b)=>a-b);
+  return '<div class="f"><label>'+label+'</label><select class="inp" data-set="'+path+'">'+all.map(v=>'<option value="'+v+'"'+(Math.abs(cur-v)<1e-6?' selected':'')+'>'+v+(unit||'')+'</option>').join('')+'</select></div>';
 }
 function colorFld(label, path) {
   return '<div class="f"><label>' + label + '</label><input type="color" data-set="' + path + '" value="' + getDeep(setup, path) + '" style="width:100%;height:38px;border:none;background:none;padding:0;cursor:pointer"></div>';
@@ -1626,12 +1645,12 @@ function renderSettings() {
     viewSetting('lockLines','Alle H-/V-Linien sperren','Schützt vor versehentlichem Verschieben')+
     '<label class="chk" style="margin:12px 0"><input type="checkbox" data-set="measureLabels.showLineValues"'+(setup.measureLabels.showLineValues!==false?' checked':'')+'> Maßwert direkt an H-/V-Linie anzeigen</label>'+
     '<div class="fg">'+quickFld('Schriftgröße Maßwert','measureLabels.font',[8,10,12,14,16,18,20,24],1,8,'')+colorFld('Farbe Maßwert','measureLabels.color')+'</div>'+
-    '<div class="settings-note"><b>H-Linie:</b> 0 cm liegt an der körpernahen/vorderen Plattenkante. <b>V-Linie:</b> 0 cm liegt exakt in der Plattenmitte; links negativ, rechts positiv. Position, Farbe und Linienstärke einer einzelnen Linie stellst du direkt ein, sobald du die Linie antippst.</div>',true);
+    '<div class="settings-preview"><div class="settings-preview-title">Vorschau</div><svg viewBox="0 0 320 105" style="width:100%;height:auto;display:block"><line x1="160" y1="18" x2="160" y2="88" stroke="#32ade6" stroke-width="1.5"/><line x1="72" y1="58" x2="248" y2="58" stroke="#ff2d55" stroke-width="1.5"/><circle cx="160" cy="58" r="5" fill="#fff" stroke="#32ade6" stroke-width="1.5"/><text x="166" y="28" fill="'+setup.measureLabels.color+'" font-size="13">0,0 cm</text><text x="205" y="52" fill="'+setup.measureLabels.color+'" font-size="13">12,0 cm</text></svg></div><div class="settings-note"><b>H-Linie:</b> 0 cm liegt an der körpernahen/vorderen Plattenkante. <b>V-Linie:</b> 0 cm liegt exakt in der Plattenmitte; links negativ, rechts positiv. Einzelne Linie antippen für Position, Farbe und Stärke.</div>',true);
 
   h+=settingSection('info','Info & Bemaßung','Objektpositionen und Produktionshinweise',
     viewSetting('infoDims','Info-Bemaßung anzeigen','Feine X-/Y-Maße an eingefügten Objekten')+
     '<div class="settings-sub">Bemaßung</div><div class="fg">'+quickFld('Schriftgröße Info-Maße','infoDims.font',[8,10,12,14,16,18,20,24],1,8,'')+quickFld('Linienstärke Info-Maße','infoDims.stroke',[0.5,0.75,1,1.25,1.5,2],0.25,0.5,'')+colorFld('Farbe Info-Maße','infoDims.color')+'</div>'+
-    '<div class="settings-note">Der obere i-Button schaltet genau diese Bemaßung ein oder aus. Objekt-Info-Texte stellst du direkt am ausgewählten Rechteck/Kreis/Kreuz/Bild ein; dort kannst du Text, Position, Größe und Farbe wählen.</div>',true);
+    '<div class="settings-preview"><div class="settings-preview-title">Vorschau</div><svg viewBox="0 0 320 92" style="width:100%;height:auto;display:block"><line x1="28" y1="58" x2="268" y2="58" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><line x1="28" y1="49" x2="28" y2="67" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><line x1="268" y1="49" x2="268" y2="67" stroke="'+setup.infoDims.color+'" stroke-width="1.5"/><text x="148" y="48" text-anchor="middle" fill="'+setup.infoDims.color+'" font-size="14" font-weight="650">42,0 cm</text></svg></div><div class="settings-note">Der obere i-Button schaltet genau diese Bemaßung ein oder aus. Objekt-Info-Texte stellst du direkt am ausgewählten Rechteck/Kreis/Kreuz/Bild ein.</div>',true);
 
   h+=settingSection('quality','Projektionsqualität','Schärfe, Kontrast und Pixel-Ausrichtung',
     '<div class="fg"><div class="f"><label>Schriftgewicht</label><select class="inp" data-set="projectionWeight">'+[[400,'400 Normal'],[500,'500 Medium'],[600,'600 Semibold'],[700,'700 Bold']].map(([v,l])=>'<option value="'+v+'"'+(+setup.projectionWeight===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>'+
@@ -1648,7 +1667,7 @@ function renderSettings() {
     '<div class="fg" style="margin-top:12px">'+fld('Überstand Hilfslinien (cm)','outerGuides.extend',0.5,0)+quickFld('Linienstärke (px)','outerGuides.width',[0.5,1,1.5,2,3,4],0.5,0.5,'')+colorFld('Farbe','outerGuides.color')+'</div>'+
     '<label class="chk" style="margin:12px 0"><input type="checkbox" data-set="outerGuides.showLabels"'+(setup.outerGuides.showLabels!==false?' checked':'')+'> Maße an Außenlinien anzeigen</label>'+
     '<div class="fg">'+quickFld('Schriftgröße Außenmaße','outerGuides.labelFont',[8,10,12,14,16,18,20,24],1,8,'')+colorFld('Farbe Außenmaße','outerGuides.labelColor')+'</div>'+
-    '<div class="settings-sub">Abstände</div>'+(setup.outerGuides.lines||[]).map((v,i)=>'<div class="row" style="margin:7px 0"><input class="inp" type="number" step="0.5" min="0.1" data-set="outerGuides.lines.'+i+'" value="'+v+'"><span style="white-space:nowrap">cm außen</span><button class="btn sm danger" data-act="outerGuideDel" data-arg="'+i+'">✕</button></div>').join('')+
+    '<div class="settings-sub">Parallele Außenlinien</div>'+(setup.outerGuides.lines||[]).map((v,i)=>'<div class="outer-guide-row"><div><label style="display:block;font-size:11.5px;color:var(--text2);margin-bottom:4px">Abstand '+(i+1)+'</label><select class="inp" data-set="outerGuides.lines.'+i+'">'+[0.5,1,1.5,2,3,4,5,7.5,10,15,20].concat([+v]).filter((x,j,a)=>a.indexOf(x)===j).sort((a,b)=>a-b).map(x=>'<option value="'+x+'"'+(+v===x?' selected':'')+'>'+x+' cm</option>').join('')+'</select></div><span style="white-space:nowrap;color:var(--text2);font-size:12px">außen</span><button class="btn sm danger" data-act="outerGuideDel" data-arg="'+i+'" aria-label="Außenlinie löschen">✕</button></div>').join('')+
     '<button class="btn sm" style="margin-top:8px" data-act="outerGuideAdd">Außenlinie hinzufügen</button>');
 
   h+=settingSection('hsp','HSP-Lineal','Brust-/Rückenposition ab Hals-Schulter-Punkt',
@@ -1671,6 +1690,12 @@ function renderSettings() {
     '<div class="row" style="flex-wrap:wrap;margin-top:14px"><button class="btn sm" data-act="exportSetup">Einstellungen exportieren</button><button class="btn sm" data-act="importSetup">Einstellungen importieren</button><span class="spacer"></span><button class="btn sm danger" data-act="resetSetup">Alles zurücksetzen</button></div>');
 
   $('#settingsBody').innerHTML=h;
+  $('#settingsBody').querySelectorAll('.settings-section').forEach(sec=>{
+    sec.addEventListener('toggle',()=>{
+      if(!sec.open)return;
+      $('#settingsBody').querySelectorAll('.settings-section[open]').forEach(other=>{if(other!==sec)other.open=false;});
+    });
+  });
 }
 /* ---------- Kalibrierung ---------- */
 function renderCalib() {
