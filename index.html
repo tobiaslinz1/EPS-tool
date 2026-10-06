@@ -337,7 +337,7 @@ const DEFAULT_SETUP = {
     ]
   },
   startTemplate: '',
-  calibration: { gridScale: 0.78, gridScaleX: 0.78, gridScaleY: 0.78, gridX: 0, gridY: 0, gridStep: 50, measureW: 40, measureH: 40, centers: { M: { x: 0.50, y: 0.50 }, L: { x: 0.28, y: 0.50 }, R: { x: 0.72, y: 0.50 } } },
+  calibration: { gridScale: 0.78, gridScaleX: 0.78, gridScaleY: 0.78, gridX: 0, gridY: 0, gridStep: 50, measureW: 40, measureH: 40, centers: { M: { x: 0.50, y: 0.50 }, L: { x: 0.28, y: 0.50 }, R: { x: 0.72, y: 0.50 } }, guideW: 520, guideH: 420, guideStroke: 2, crossStroke: 1.5, moveStep: 5, scalePx: 360 },
   outerGuides: { extend: 3, width: 2, color: '#30d158', lines: [2,4] }
 };
 const DEFAULT_VIEW = { grid: true, measures: true, ruler: false, hsp: false, cross: false, outerGuides: false, infoDims: false, snap: true, lockLines: false };
@@ -727,20 +727,22 @@ function calibOverlaySVG(su,c,W,H,pids){
   let s='<svg class="bover" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">';
   const key=su.twoPlates?(c.plate||'L'):'M', C=su.calibration||{}, all=C.centers||{}, cc=all[key]||{x:.5,y:.5};
   const cen={x:clamp(+cc.x||.5,0,1)*W,y:clamp(+cc.y||.5,0,1)*H};
-  const cs=Math.max(.5,+c.crossStroke||1.5), gs=Math.max(.5,+c.guideStroke||2);
-  const cross=(col,label,arm)=>'<line x1="'+(cen.x-arm)+'" y1="'+cen.y+'" x2="'+(cen.x+arm)+'" y2="'+cen.y+'" stroke="'+col+'" stroke-width="'+cs+'"/><line x1="'+cen.x+'" y1="'+(cen.y-arm)+'" x2="'+cen.x+'" y2="'+(cen.y+arm)+'" stroke="'+col+'" stroke-width="'+cs+'"/><circle cx="'+cen.x+'" cy="'+cen.y+'" r="5" fill="none" stroke="#fff" stroke-width="'+cs+'"/><text x="'+cen.x+'" y="'+(cen.y+arm+28)+'" fill="'+col+'" font-size="18" text-anchor="middle" font-weight="600">'+label+'</text>';
+  const cs=clamp(+C.crossStroke||1.5,.5,10), gs=clamp(+C.guideStroke||2,.5,10);
+  const cross=(col,label,arm)=>'<line x1="'+(cen.x-arm)+'" y1="'+cen.y+'" x2="'+(cen.x+arm)+'" y2="'+cen.y+'" stroke="'+col+'" stroke-width="'+cs+'"/><line x1="'+cen.x+'" y1="'+(cen.y-arm)+'" x2="'+cen.x+'" y2="'+(cen.y+arm)+'" stroke="'+col+'" stroke-width="'+cs+'"/><circle cx="'+cen.x+'" cy="'+cen.y+'" r="5" fill="#000" stroke="#fff" stroke-width="'+cs+'"/><text x="'+cen.x+'" y="'+(cen.y+arm+28)+'" fill="'+col+'" font-size="18" text-anchor="middle" font-weight="600">'+label+'</text>';
 
   if(c.step===1){
     s+=cross('#64d2ff',su.twoPlates?(key==='L'?'POSITION LINKS':'POSITION RECHTS'):'POSITION MITTE',55);
   } else if(c.step===2){
-    const gw=clamp(+c.guideW||520,120,W*.95), gh=clamp(+c.guideH||420,120,H*.95), x=cen.x-gw/2, y=cen.y-gh/2, arm=Math.max(30,Math.min(gw,gh)*.14);
-    s+='<rect x="'+x+'" y="'+y+'" width="'+gw+'" height="'+gh+'" fill="none" stroke="#fff" stroke-width="'+gs+'"/>';
-    s+=cross('#ff9f0a','MITTELPUNKT',arm);
+    const gw=clamp(+C.guideW||520,120,W*.95), gh=clamp(+C.guideH||420,120,H*.95), x=cen.x-gw/2, y=cen.y-gh/2, arm=Math.max(30,Math.min(gw,gh)*.14);
+    s+='<rect x="'+x+'" y="'+y+'" width="'+gw+'" height="'+gh+'" fill="rgba(255,159,10,.025)" stroke="#ff9f0a" stroke-width="'+gs+'"/>';
+    s+='<path d="M'+x+' '+y+'h22 M'+x+' '+y+'v22 M'+(x+gw)+' '+y+'h-22 M'+(x+gw)+' '+y+'v22 M'+x+' '+(y+gh)+'h22 M'+x+' '+(y+gh)+'v-22 M'+(x+gw)+' '+(y+gh)+'h-22 M'+(x+gw)+' '+(y+gh)+'v-22" stroke="#fff" stroke-width="'+Math.max(1,gs)+'" fill="none"/>';
+    s+=cross('#64d2ff','MITTELPUNKT',arm);
+    s+='<text x="'+cen.x+'" y="'+Math.max(24,y-14)+'" fill="#ff9f0a" font-size="17" text-anchor="middle" font-weight="700">RAHMEN '+Math.round(gw)+' × '+Math.round(gh)+' px</text>';
   } else if(c.step===3){
-    const q=clamp(+c.scalePx||360,120,Math.min(W,H)*.8), x=cen.x-q/2, y=cen.y-q/2;
+    const q=clamp(+C.scalePx||360,120,Math.min(W,H)*.8), x=cen.x-q/2, y=cen.y-q/2;
     s+='<rect x="'+x+'" y="'+y+'" width="'+q+'" height="'+q+'" fill="none" stroke="#ff9f0a" stroke-width="'+gs+'"/>';
     s+=cross('#64d2ff','GESPEICHERTER MITTELPUNKT',Math.max(28,q*.13));
-    s+='<text x="'+cen.x+'" y="'+(y+q+30)+'" fill="#ff9f0a" font-size="20" text-anchor="middle" font-weight="700">MESSQUADRAT · Größe '+(q<=280?'1':q<=420?'2':'3')+'</text>';
+    s+='<text x="'+cen.x+'" y="'+(y+q+30)+'" fill="#ff9f0a" font-size="20" text-anchor="middle" font-weight="700">MESSQUADRAT · '+Math.round(q)+' px</text>';
   }
   return s+'</svg>';
 }
@@ -1308,14 +1310,16 @@ const ACT = {
   calPlate(p) { S.calib.plate = p; S.plate=p; syncLive(true); renderCalib(); renderTop(); },
   calPlateMode(v){ setup.twoPlates=String(v)==='2'; if(!setup.twoPlates){S.calib.plate='L';S.plate='L';} saveSetup();syncLive(true);renderCalib();renderTop(); },
   calRotate(v){ setup.outputRotation=+v||0; saveSetup();syncLive(true);renderCalib(); },
-  calRoughStep(v) { S.calib.roughStep=+v; renderCalib(); },
-  calSquareSize(v){S.calib.scalePx=+v;syncLive(true);renderCalib();},
-  calScaleSize(v){S.calib.scalePx=+v;syncLive(true);renderCalib();},
-  calGuideSize(a){const [dw,dh]=String(a).split(',').map(Number);S.calib.guideW=clamp((+S.calib.guideW||520)+dw,120,2000);S.calib.guideH=clamp((+S.calib.guideH||420)+dh,120,1400);syncLive(true);renderCalib();},
-  calCrossStroke(v){S.calib.crossStroke=clamp(+v||1.5,.5,10);syncLive(true);renderCalib();},
+  calRoughStep(v) { setup.calibration.moveStep=+v; saveSetup();syncLive(true);renderCalib(); },
+  calMoveStep(v){setup.calibration.moveStep=+v;saveSetup();syncLive(true);renderCalib();},
+  calSquareSize(v){setup.calibration.scalePx=+v;saveSetup();syncLive(true);renderCalib();},
+  calScaleSize(v){setup.calibration.scalePx=+v;saveSetup();syncLive(true);renderCalib();},
+  calGuideSize(a){const [dw,dh]=String(a).split(',').map(Number),g=setup.calibration;g.guideW=clamp((+g.guideW||520)+dw,120,2000);g.guideH=clamp((+g.guideH||420)+dh,120,1400);saveSetup();syncLive(true);renderCalib();},
+  calCrossStroke(v){setup.calibration.crossStroke=clamp(+v||1.5,.5,10);saveSetup();syncLive(true);renderCalib();},
+  calStrokePreset(a){const [gs,cs]=String(a).split(',').map(Number),g=setup.calibration;g.guideStroke=clamp(gs,.5,10);g.crossStroke=clamp(cs,.5,10);saveSetup();syncLive(true);renderCalib();},
   calAcceptCenter(){syncLive(true);toast('Mittelpunkt gespeichert');S.calib.step=3;syncLive(true);renderCalib();},
   calCenterNudge(a){
-    const [key,dx,dy]=String(a).split(','),bs=S.beamerSize,st=+S.calib.roughStep||5,g=setup.calibration;
+    const [key,dx,dy]=String(a).split(','),bs=S.beamerSize,g=setup.calibration,st=+g.moveStep||5;
     g.centers=g.centers||{M:{x:.5,y:.5},L:{x:.28,y:.5},R:{x:.72,y:.5}};
     const cc=g.centers[key]||(g.centers[key]={x:key==='L'?.28:key==='R'?.72:.5,y:.5});
     cc.x=clamp((+cc.x||.5)+(+dx)*st/Math.max(1,bs.w),0,1); cc.y=clamp((+cc.y||.5)+(+dy)*st/Math.max(1,bs.h),0,1);
@@ -1371,7 +1375,7 @@ const ACT = {
     saveSetup();syncLive(true);renderCalib();
   },
   calGlobalMeasure() {
-    const q=clamp(+S.calib.scalePx||360,120,1000), mw=+($('#mW')||{}).value, mh=+($('#mH')||{}).value, bs=S.beamerSize;
+    const q=clamp(+setup.calibration.scalePx||360,120,1000), mw=+($('#mW')||{}).value, mh=+($('#mH')||{}).value, bs=S.beamerSize;
     if(!(mw>0&&mh>0))return toast('Breite und Höhe des Messquadrats eingeben');
     setup.area.w=r2(Math.max(1,bs.w)*mw/q);
     setup.area.h=r2(Math.max(1,bs.h)*mh/q);
@@ -1517,56 +1521,58 @@ function renderSettings() {
 
 /* ---------- Kalibrierung ---------- */
 function renderCalib() {
-  const c=S.calib, st=c.step, two=setup.twoPlates, key=two?(c.plate||'L'):'M';
-  const C=setup.calibration||{}, centers=C.centers||{}, cc=centers[key]||{x:.5,y:.5}, bs=S.beamerSize;
+  const c=S.calib, st=c.step, two=setup.twoPlates, key=two?(c.plate||'L'):'M', G=setup.calibration||{};
+  G.centers=G.centers||{M:{x:.5,y:.5},L:{x:.28,y:.5},R:{x:.72,y:.5}};
+  const cc=G.centers[key]||(G.centers[key]={x:key==='L'?.28:key==='R'?.72:.5,y:.5}), bs=S.beamerSize;
   const steps=[[1,'Beamer'],[2,'Mittelpunkt'],[3,'Maßstab'],[4,'Kontrolle']];
   $('#calibHead').innerHTML='<h2>Kalibrierung</h2><div class="seg">'+steps.map(([n,l])=>'<button class="'+(st===n?'on':'')+'" data-act="calStep" data-arg="'+n+'">'+n+'. '+l+'</button>').join('')+'</div>';
 
-  const positionSelector=two
-    ? '<div class="lab">Plattenposition</div><div class="seg" style="margin-bottom:14px"><button class="'+(c.plate==='L'?'on':'')+'" data-act="calPlate" data-arg="L">Links</button><button class="'+(c.plate==='R'?'on':'')+'" data-act="calPlate" data-arg="R">Rechts</button></div>'
-    : '<div class="kv"><span>Plattenposition</span><b>Mitte</b></div>';
-
-  const movePad='<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap">'+
-    '<div><div class="lab">Rahmen + Mittelpunkt verschieben</div><div class="pad"><span></span><button data-act="calCenterNudge" data-arg="'+key+',0,-1">↑</button><span></span><button data-act="calCenterNudge" data-arg="'+key+',-1,0">←</button><button data-act="calCenterNudge" data-arg="'+key+',0,1">↓</button><button data-act="calCenterNudge" data-arg="'+key+',1,0">→</button></div></div>'+
-    '<div><div class="lab">Schrittweite</div><div class="seg">'+[1,5,20].map(v=>'<button class="'+(+c.roughStep===v?'on':'')+'" data-act="calRoughStep" data-arg="'+v+'">'+v+' px</button>').join('')+'</div>'+
-    '<div class="kv" style="margin-top:12px"><span>X</span><b>'+Math.round((+cc.x||.5)*bs.w)+' px</b></div><div class="kv"><span>Y</span><b>'+Math.round((+cc.y||.5)*bs.h)+' px</b></div>'+
-    '<button class="btn sm block" style="margin-top:10px" data-act="calCenterReset">Auf Standardposition zurücksetzen</button></div></div>';
-
+  const pos=two?'<div class="lab">Plattenposition</div><div class="seg"><button class="'+(c.plate==='L'?'on':'')+'" data-act="calPlate" data-arg="L">Links</button><button class="'+(c.plate==='R'?'on':'')+'" data-act="calPlate" data-arg="R">Rechts</button></div>':'<div class="kv"><span>Plattenposition</span><b>Mitte</b></div>';
   let h='';
+
   if(st===1){
-    h+='<div class="card"><h4>1. Beamer und Plattenposition</h4><p class="hint">Lege zuerst fest, ob du eine mittlere Platte oder zwei feste Positionen links/rechts verwendest. Danach kannst du die Ausgabe drehen.</p>'+
-      '<div class="lab">Anzahl Platten</div><div class="seg" style="margin-bottom:14px"><button class="'+(!two?'on':'')+'" data-act="calPlateMode" data-arg="1">1 Platte</button><button class="'+(two?'on':'')+'" data-act="calPlateMode" data-arg="2">2 Platten</button></div>'+
-      positionSelector+
-      '<div class="lab" style="margin-top:14px">Beamerbild drehen</div><div class="seg">'+[0,90,180,270].map(v=>'<button class="'+(+setup.outputRotation===v?'on':'')+'" data-act="calRotate" data-arg="'+v+'">'+v+'°</button>').join('')+'</div>'+
-      '<p class="hint" style="margin-top:12px">Die Drehung verändert weder Maßstab noch gespeicherte Mittelpunkte.</p></div>';
-  } else if(st===2){
-    h+='<div class="card"><h4>2. Mittelpunkt sauber setzen</h4><p class="hint">Außen siehst du einen frei einstellbaren Rahmen. Das Fadenkreuz sitzt immer exakt in seiner Mitte. Passe den Rahmen grob an deinen sichtbaren Platten-/Arbeitsbereich an und verschiebe anschließend beides gemeinsam, bis das Fadenkreuz exakt auf dem realen Plattenmittelpunkt liegt.</p>'+
-      positionSelector+
-      '<div class="lab" style="margin-top:14px">Rahmengröße</div>'+
-      '<div class="fg"><div class="f"><label>Breite (px)</label><input class="inp" type="number" min="120" step="10" data-cal="guideW" value="'+(+c.guideW||520)+'"></div><div class="f"><label>Höhe (px)</label><input class="inp" type="number" min="120" step="10" data-cal="guideH" value="'+(+c.guideH||420)+'"></div></div>'+
+    h='<div class="card"><h4>1. Beamer</h4><p class="hint">Lege die Maschinenart und die Orientierung der Projektion fest.</p>'+
+      '<div class="lab">Platten</div><div class="seg"><button class="'+(!two?'on':'')+'" data-act="calPlateMode" data-arg="1">1 Platte · Mitte</button><button class="'+(two?'on':'')+'" data-act="calPlateMode" data-arg="2">2 Platten · Links / Rechts</button></div>'+
+      '<div style="margin-top:14px">'+pos+'</div><div class="lab" style="margin-top:16px">Beamerbild drehen</div><div class="seg">'+[0,90,180,270].map(v=>'<button class="'+(+setup.outputRotation===v?'on':'')+'" data-act="calRotate" data-arg="'+v+'">'+v+'°</button>').join('')+'</div></div>';
+  }
+
+  if(st===2){
+    const gw=Math.round(+G.guideW||520), gh=Math.round(+G.guideH||420), gs=+G.guideStroke||2, cs=+G.crossStroke||1.5, ms=+G.moveStep||5;
+    h='<div class="card"><h4>2. Mittelpunkt und Rahmen</h4><p class="hint">Der orange Außenrahmen und das blaue Fadenkreuz sind eine reine Kalibrierhilfe. Das Kreuz bleibt immer exakt in der Mitte des Rahmens. Stelle zuerst Breite/Höhe grob ein und schiebe danach den ganzen Rahmen auf den realen Mittelpunkt.</p>'+pos+
+      '<div class="kv" style="margin-top:14px"><span>Aktueller Rahmen</span><b>'+gw+' × '+gh+' px</b></div>'+
+      '<div class="lab" style="margin-top:16px">Rahmengröße</div><div class="grid2">'+
+        '<div class="f"><label>Breite</label><input class="inp" id="calGuideW" type="number" min="120" max="2000" step="10" value="'+gw+'"></div>'+
+        '<div class="f"><label>Höhe</label><input class="inp" id="calGuideH" type="number" min="120" max="1400" step="10" value="'+gh+'"></div>'+
+      '</div>'+
       '<div class="row" style="flex-wrap:wrap;margin-top:10px"><button class="btn sm" data-act="calGuideSize" data-arg="-50,0">Breite −50</button><button class="btn sm" data-act="calGuideSize" data-arg="-10,0">−10</button><button class="btn sm" data-act="calGuideSize" data-arg="10,0">+10</button><button class="btn sm" data-act="calGuideSize" data-arg="50,0">Breite +50</button></div>'+
       '<div class="row" style="flex-wrap:wrap;margin-top:8px"><button class="btn sm" data-act="calGuideSize" data-arg="0,-50">Höhe −50</button><button class="btn sm" data-act="calGuideSize" data-arg="0,-10">−10</button><button class="btn sm" data-act="calGuideSize" data-arg="0,10">+10</button><button class="btn sm" data-act="calGuideSize" data-arg="0,50">Höhe +50</button></div>'+
-      '<div class="lab" style="margin-top:16px">Linienstärken</div><div class="fg"><div class="f"><label>Außenrahmen (px)</label><input class="inp" type="number" min="0.5" max="10" step="0.5" data-cal="guideStroke" value="'+(+c.guideStroke||2)+'"></div><div class="f"><label>Fadenkreuz (px)</label><input class="inp" type="number" min="0.5" max="10" step="0.5" data-cal="crossStroke" value="'+(+c.crossStroke||1.5)+'"></div></div>'+
-      '<div class="seg" style="margin-top:10px">'+[0.5,1,1.5,2,3].map(v=>'<button data-act="calCrossStroke" data-arg="'+v+'">'+String(v).replace('.',',')+' px Kreuz</button>').join('')+'</div>'+
-      '<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">'+movePad+
-      '<div style="margin-top:14px"><button class="btn primary" data-act="calAcceptCenter">Mittelpunkt übernehmen</button></div></div>';
-  } else if(st===3){
-    const q=+c.scalePx||360, sizeNo=q<=280?1:q<=420?2:3;
-    h+='<div class="card"><h4>3. Maßstab messen</h4><p class="hint">Das Messquadrat sitzt exakt auf dem gespeicherten Mittelpunkt. Wähle eine gut messbare Größe. Die Zahl 1/2/3 ist nur die projizierte Testgröße – entscheidend ist dein reales Maß mit dem Zollstock.</p>'+
-      positionSelector+
-      '<div class="lab" style="margin-top:14px">Messquadrat</div><div class="seg">'+[[240,'Size 1'],[360,'Size 2'],[480,'Size 3']].map(([v,l])=>'<button class="'+(q===v?'on':'')+'" data-act="calScaleSize" data-arg="'+v+'">'+l+'</button>').join('')+'</div>'+
-      '<div class="kv" style="margin-top:12px"><span>Aktive Testgröße</span><b>Size '+sizeNo+' · '+q+' px</b></div>'+
-      '<div class="fg" style="margin-top:14px"><div class="f"><label>Real gemessene Breite (cm)</label><input class="inp" id="mW" type="number" min="1" step="0.1" placeholder="z. B. 31,8"></div><div class="f"><label>Real gemessene Höhe (cm)</label><input class="inp" id="mH" type="number" min="1" step="0.1" placeholder="z. B. 31,5"></div></div>'+
-      '<button class="btn primary" style="margin-top:14px" data-act="calGlobalMeasure">Maßstab berechnen</button>'+
-      '<p class="hint" style="margin-top:12px">Dabei wird ausschließlich Pixel → Zentimeter berechnet. Der gespeicherte Mittelpunkt bleibt unverändert.</p></div>';
-  } else {
-    const pids=two?['L','R']:['L'];
-    h+='<div class="card"><h4>4. Kontrolle</h4><p class="hint">Jetzt wird die reale Platte aus gespeichertem Mittelpunkt, kalibriertem Maßstab und deiner aktuell eingestellten Plattengröße erzeugt. Änderst du später die Plattengröße, wächst oder schrumpft sie um denselben Mittelpunkt.</p>'+
-      positionSelector+
-      pids.map(id=>'<div class="kv"><span>'+(two?(id==='L'?'Links':'Rechts'):'Platte')+'</span><b>'+fmt(setup.plates[id].w)+' × '+fmt(setup.plates[id].h)+' cm</b></div>').join('')+
-      '<div class="kv"><span>Kalibrierte Projektionsfläche</span><b>'+fmt(setup.area.w)+' × '+fmt(setup.area.h)+' cm</b></div>'+
-      '<div class="fg" style="margin-top:14px">'+fld('Rahmen nach innen (mm)','frameInset',0.5,0)+'</div>'+
-      '<p class="hint" style="margin-top:12px">Der Rahmen-Offset ist nur optisch. Maßstab und Mittelpunkt werden dadurch nicht verändert.</p></div>';
+      '<div class="lab" style="margin-top:18px">Linienstärken</div><div class="grid2">'+
+        '<div class="f"><label>Rahmen</label><input class="inp" id="calGuideStroke" type="number" min="0.5" max="10" step="0.5" value="'+gs+'"></div>'+
+        '<div class="f"><label>Fadenkreuz</label><input class="inp" id="calCrossStroke" type="number" min="0.5" max="10" step="0.5" value="'+cs+'"></div>'+
+      '</div>'+
+      '<div class="row" style="flex-wrap:wrap;margin-top:10px"><button class="btn sm" data-act="calStrokePreset" data-arg="1,0.5">sehr fein</button><button class="btn sm" data-act="calStrokePreset" data-arg="1.5,1">fein</button><button class="btn sm" data-act="calStrokePreset" data-arg="2,1.5">normal</button><button class="btn sm" data-act="calStrokePreset" data-arg="3,2">kräftig</button></div>'+
+      '<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">'+
+      '<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap"><div><div class="lab">Rahmen verschieben</div><div class="pad"><span></span><button data-act="calCenterNudge" data-arg="'+key+',0,-1">↑</button><span></span><button data-act="calCenterNudge" data-arg="'+key+',-1,0">←</button><button data-act="calCenterNudge" data-arg="'+key+',0,1">↓</button><button data-act="calCenterNudge" data-arg="'+key+',1,0">→</button></div></div>'+
+      '<div><div class="lab">Schrittweite</div><div class="seg">'+[1,5,20].map(v=>'<button class="'+(ms===v?'on':'')+'" data-act="calMoveStep" data-arg="'+v+'">'+v+' px</button>').join('')+'</div>'+
+      '<div class="kv" style="margin-top:12px"><span>Mittelpunkt X</span><b>'+Math.round((+cc.x||.5)*bs.w)+' px</b></div><div class="kv"><span>Mittelpunkt Y</span><b>'+Math.round((+cc.y||.5)*bs.h)+' px</b></div>'+
+      '<button class="btn sm block" style="margin-top:10px" data-act="calCenterReset">Position zurücksetzen</button></div></div>'+
+      '<button class="btn primary block" style="margin-top:18px" data-act="calAcceptCenter">Mittelpunkt übernehmen und weiter</button></div>';
+  }
+
+  if(st===3){
+    const q=Math.round(+G.scalePx||360);
+    h='<div class="card"><h4>3. Maßstab</h4><p class="hint">Das orange Messquadrat bleibt exakt auf dem gespeicherten Mittelpunkt. Wähle eine gut messbare Größe, miss die reale Breite und Höhe und übernimm den Maßstab.</p>'+pos+
+      '<div class="lab" style="margin-top:16px">Messquadrat</div><div class="seg">'+[[240,'Size 1'],[360,'Size 2'],[480,'Size 3']].map(([v,l])=>'<button class="'+(q===v?'on':'')+'" data-act="calScaleSize" data-arg="'+v+'">'+l+'</button>').join('')+'</div>'+
+      '<div class="kv" style="margin-top:12px"><span>Projizierte Testgröße</span><b>'+q+' × '+q+' px</b></div>'+
+      '<div class="grid2" style="margin-top:14px"><div class="f"><label>Real gemessene Breite (cm)</label><input class="inp" id="mW" type="number" min="1" step="0.1"></div><div class="f"><label>Real gemessene Höhe (cm)</label><input class="inp" id="mH" type="number" min="1" step="0.1"></div></div>'+
+      '<button class="btn primary block" style="margin-top:16px" data-act="calGlobalMeasure">Maßstab berechnen</button></div>';
+  }
+
+  if(st===4){
+    h='<div class="card"><h4>4. Kontrolle</h4><p class="hint">Jetzt wird die echte Platte aus Mittelpunkt, Maßstab und Plattengröße aufgebaut. Ein späterer Plattenwechsel verändert den gespeicherten Mittelpunkt nicht.</p>'+pos+
+      '<div class="kv" style="margin-top:14px"><span>Projektionsfläche</span><b>'+fmt(setup.area.w)+' × '+fmt(setup.area.h)+' cm</b></div>'+
+      '<div class="kv"><span>Platte</span><b>'+fmt(setup.plates[two?(c.plate||'L'):'L'].w)+' × '+fmt(setup.plates[two?(c.plate||'L'):'L'].h)+' cm</b></div>'+
+      '<div class="fg" style="margin-top:14px">'+fld('Rahmen nach innen (mm)','frameInset',0.5,0)+'</div></div>';
   }
 
   $('#calibBody').innerHTML=h;
@@ -1782,7 +1788,7 @@ function bindGlobal() {
     if (el.dataset.p) propInput(el, false);
     else if (el.dataset.set) setInput(el, false);
     else if (el.dataset.info) infoInput(el, false);
-    else if (el.dataset.cal) { const k=el.dataset.cal,n=parseFloat(el.value); if(!isNaN(n)){S.calib[k]=n;if(k==='guideW')S.calib[k]=clamp(n,120,2000);if(k==='guideH')S.calib[k]=clamp(n,120,1400);if(k==='guideStroke'||k==='crossStroke')S.calib[k]=clamp(n,.5,10);syncLive(true);} }
+    else if (el.id==='calGuideW'||el.id==='calGuideH'||el.id==='calGuideStroke'||el.id==='calCrossStroke') { const n=parseFloat(el.value),g=setup.calibration;if(!isNaN(n)){if(el.id==='calGuideW')g.guideW=clamp(n,120,2000);if(el.id==='calGuideH')g.guideH=clamp(n,120,1400);if(el.id==='calGuideStroke')g.guideStroke=clamp(n,.5,10);if(el.id==='calCrossStroke')g.crossStroke=clamp(n,.5,10);saveSetup();syncLive(true);} }
   });
   document.addEventListener('change', e => {
     const el = e.target;
@@ -1790,6 +1796,7 @@ function bindGlobal() {
     if (el.dataset.p) propInput(el, true);
     else if (el.dataset.set) setInput(el, true);
     else if (el.dataset.info) infoInput(el, true);
+    else if (el.id==='calGuideW'||el.id==='calGuideH'||el.id==='calGuideStroke'||el.id==='calCrossStroke') { const n=parseFloat(el.value),g=setup.calibration;if(!isNaN(n)){if(el.id==='calGuideW')g.guideW=clamp(n,120,2000);if(el.id==='calGuideH')g.guideH=clamp(n,120,1400);if(el.id==='calGuideStroke')g.guideStroke=clamp(n,.5,10);if(el.id==='calCrossStroke')g.crossStroke=clamp(n,.5,10);saveSetup();syncLive(true);renderCalib();} }
   });
   document.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.grp) S.open[d.dataset.grp] = d.open; }, true);
   $('#fImg').addEventListener('change', e => { readImage(e.target.files[0]); e.target.value = ''; });
@@ -1849,7 +1856,7 @@ function initEditor() {
   S = {
     layout: normLayout(layout), view, plate: 'L', sel: [], tab: 'obj', step: 0.5, rotStep: 1, zoom: 1, K: 10,
     multi: false, open: {}, history: [], hi: -1, warned: false,
-    calib: { active: false, step: 1, plate: 'L', corner: 0, nudge: 5, roughStep: 5, scalePx: 360, guideW: 520, guideH: 420, guideStroke: 2, crossStroke: 1.5 },
+    calib: { active: false, step: 1, plate: 'L', corner: 0, nudge: 5 },
     beamerSize: LS.get('eps5-beamer-size', { w: 1920, h: 1080 })
   };
   try { bc = new BroadcastChannel('eps5'); } catch (e) { bc = null; }
