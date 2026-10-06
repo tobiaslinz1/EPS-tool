@@ -337,7 +337,7 @@ const DEFAULT_SETUP = {
     ]
   },
   startTemplate: '',
-  calibration: { gridScale: 0.78, gridScaleX: 0.78, gridScaleY: 0.78, gridX: 0, gridY: 0, gridStep: 50, measureW: 40, measureH: 40 },
+  calibration: { gridScale: 0.78, gridScaleX: 0.78, gridScaleY: 0.78, gridX: 0, gridY: 0, gridStep: 50, measureW: 40, measureH: 40, centers: { L: { x: 0.30, y: 0.50 }, R: { x: 0.70, y: 0.50 } } },
   outerGuides: { extend: 3, width: 2, color: '#30d158', lines: [2,4] }
 };
 const DEFAULT_VIEW = { grid: true, measures: true, ruler: false, hsp: false, cross: false, outerGuides: false, infoDims: false, snap: true, lockLines: false };
@@ -384,9 +384,9 @@ function fromV4(d) {
 
 /* ================= Geometrie ================= */
 function roughCorners(su, pid) {
-  const p = su.plates[pid], A = su.area;
+  const p = su.plates[pid], A = su.area, C=su.calibration||{}, cc=C.centers&&C.centers[pid];
   const ox=(+p.offsetX||0)/10, oy=(+p.offsetY||0)/10, a=(+p.offsetRot||0)*Math.PI/180;
-  const cx=(+p.x||0)+p.w/2+ox, cy=(+p.y||0)+p.h/2+oy, ca=Math.cos(a), sa=Math.sin(a);
+  const cx=(cc&&isFinite(+cc.x)?(+cc.x)*A.w:(+p.x||0)+p.w/2)+ox, cy=(cc&&isFinite(+cc.y)?(+cc.y)*A.h:(+p.y||0)+p.h/2)+oy, ca=Math.cos(a), sa=Math.sin(a);
   return [[-p.w/2,-p.h/2],[p.w/2,-p.h/2],[p.w/2,p.h/2],[-p.w/2,p.h/2]].map(([dx,dy])=>({
     x:(cx+dx*ca-dy*sa)/A.w, y:(cy+dx*sa+dy*ca)/A.h
   }));
@@ -721,12 +721,11 @@ function calibPlateSVG(su, pid, K, c) {
 
 function calibOverlaySVG(su,c,W,H,pids){
   let s='<svg class="bover" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">';
-  const pid=su.twoPlates?(c.plate||'L'):'L',p=su.plates[pid];
-  const cen={x:((+p.x||0)+p.w/2)/su.area.w*W,y:((+p.y||0)+p.h/2)/su.area.h*H};
+  const pid=su.twoPlates?(c.plate||'L'):'L',C=su.calibration||{},cc=(C.centers&&C.centers[pid])||{x:.5,y:.5},cen={x:(+cc.x||.5)*W,y:(+cc.y||.5)*H};
   const cross=(col,label)=>'<line x1="'+(cen.x-55)+'" y1="'+cen.y+'" x2="'+(cen.x+55)+'" y2="'+cen.y+'" stroke="'+col+'" stroke-width="4"/><line x1="'+cen.x+'" y1="'+(cen.y-55)+'" x2="'+cen.x+'" y2="'+(cen.y+55)+'" stroke="'+col+'" stroke-width="4"/><circle cx="'+cen.x+'" cy="'+cen.y+'" r="9" fill="none" stroke="#fff" stroke-width="3"/><text x="'+cen.x+'" y="'+(cen.y+82)+'" fill="'+col+'" font-size="20" text-anchor="middle" font-weight="700">'+label+'</text>';
-  if(c.step===1){s+=cross('#64d2ff',su.twoPlates?(pid==='L'?'BEAMER LINKS':'BEAMER RECHTS'):'BEAMER MITTE');}
-  else if(c.step===2){const gw=Math.max(5,+c.guideW||30)*W/su.area.w,gh=Math.max(5,+c.guideH||30)*H/su.area.h;s+='<rect x="'+(cen.x-gw/2)+'" y="'+(cen.y-gh/2)+'" width="'+gw+'" height="'+gh+'" fill="none" stroke="#ff9f0a" stroke-width="4"/>'+cross('#ff9f0a','MITTELPUNKT');}
-  else if(c.step===3){const q=Math.max(5,+c.sq||20),qw=q*W/su.area.w,qh=q*H/su.area.h;s+=cross('#64d2ff','MITTELPUNKT');s+='<rect x="'+(cen.x-qw/2)+'" y="'+(cen.y-qh/2)+'" width="'+qw+'" height="'+qh+'" fill="none" stroke="#ff9f0a" stroke-width="5"/><text x="'+cen.x+'" y="'+(cen.y+qh/2+30)+'" fill="#ff9f0a" font-size="21" text-anchor="middle" font-weight="700">'+q+' × '+q+' cm · messen</text>';}
+  if(c.step===1){s+=cross('#64d2ff',su.twoPlates?(pid==='L'?'POSITION LINKS':'POSITION RECHTS'):'POSITION MITTE');}
+  else if(c.step===2){const gw=Math.max(120,+c.guideW||520),gh=Math.max(120,+c.guideH||420),x=cen.x-gw/2,y=cen.y-gh/2;s+='<rect x="'+x+'" y="'+y+'" width="'+gw+'" height="'+gh+'" fill="rgba(255,255,255,.035)" stroke="#fff" stroke-width="4"/><line x1="'+x+'" y1="'+y+'" x2="'+(x+gw)+'" y2="'+(y+gh)+'" stroke="#64d2ff" stroke-width="3"/><line x1="'+(x+gw)+'" y1="'+y+'" x2="'+x+'" y2="'+(y+gh)+'" stroke="#64d2ff" stroke-width="3"/>'+cross('#ff9f0a','MITTELPUNKT');}
+  else if(c.step===3){const q=Math.max(5,+c.sq||20),qw=q*W/su.area.w,qh=q*H/su.area.h;s+=cross('#64d2ff','GESPEICHERTER MITTELPUNKT');s+='<rect x="'+(cen.x-qw/2)+'" y="'+(cen.y-qh/2)+'" width="'+qw+'" height="'+qh+'" fill="none" stroke="#ff9f0a" stroke-width="5"/><text x="'+cen.x+'" y="'+(cen.y+qh/2+30)+'" fill="#ff9f0a" font-size="21" text-anchor="middle" font-weight="700">'+q+' × '+q+' cm · messen</text>';}
   return s+'</svg>';
 }
 /* ================= STEUERFENSTER ================= */
@@ -1294,9 +1293,11 @@ const ACT = {
   calRoughStep(v) { S.calib.roughStep=+v; renderCalib(); },
   calSquareSize(v){S.calib.sq=+v;syncLive(true);renderCalib();},
   calCenterNudge(a){
-    const [pid,dx,dy]=a.split(','),p=setup.plates[pid],st=+S.calib.roughStep||0.5;
-    p.corners=null;p.x=r2((+p.x||0)+(+dx)*st);p.y=r2((+p.y||0)+(+dy)*st);
-    saveSetup();syncLive(true);renderCalib();
+    const [pid,dx,dy]=a.split(','),bs=S.beamerSize,st=+S.calib.roughStep||5,g=setup.calibration;
+    g.centers=g.centers||{L:{x:.3,y:.5},R:{x:.7,y:.5}};
+    const cc=g.centers[pid]||(g.centers[pid]={x:.5,y:.5});
+    cc.x=clamp((+cc.x||.5)+(+dx)*st/bs.w,0,1); cc.y=clamp((+cc.y||.5)+(+dy)*st/bs.h,0,1);
+    setup.plates[pid].corners=null;saveSetup();syncLive(true);renderCalib();
   },
   calRoughNudge(a) {
     const [dx,dy]=a.split(',').map(Number), p=setup.plates[S.calib.plate], st=+S.calib.roughStep||0.5;
@@ -1342,10 +1343,9 @@ const ACT = {
   calGlobalMeasure() {
     const q=Math.max(5,+S.calib.sq||20), mw=+($('#mW')||{}).value, mh=+($('#mH')||{}).value;
     if(!(mw>0&&mh>0))return toast('Breite und Höhe des Messquadrats eingeben');
-    const ow=setup.area.w,oh=setup.area.h,centers={};
-    for(const id of ['L','R']){const p=setup.plates[id];centers[id]={x:((+p.x||0)+p.w/2)/ow,y:((+p.y||0)+p.h/2)/oh};}
+    const ow=setup.area.w,oh=setup.area.h;
     setup.area.w=r2(ow*(mw/q)); setup.area.h=r2(oh*(mh/q));
-    for(const id of ['L','R']){const p=setup.plates[id];p.corners=null;p.x=r2(centers[id].x*setup.area.w-p.w/2);p.y=r2(centers[id].y*setup.area.h-p.h/2);}
+    for(const id of ['L','R'])setup.plates[id].corners=null;
     saveSetup(); syncLive(true); renderCalib();
     toast('Globaler Maßstab korrigiert – Quadrat erneut messen');
   },
@@ -1492,12 +1492,12 @@ function renderCalib() {
   const steps=[[1,'Beamer / Position'],[2,'Mittelpunkt'],[3,'Maßstab'],[4,'Kontrolle']];
   $('#calibHead').innerHTML='<h2>Kalibrierung</h2><div class="seg">'+steps.map(([n,l])=>'<button class="'+(st===n?'on':'')+'" data-act="calStep" data-arg="'+n+'">'+n+'. '+l+'</button>').join('')+'</div>';
   const plateSel=two?'<div class="lab">Beamer-/Plattenposition</div><div class="seg" style="margin-bottom:14px"><button class="'+(pid==='L'?'on':'')+'" data-act="calPlate" data-arg="L">Links</button><button class="'+(pid==='R'?'on':'')+'" data-act="calPlate" data-arg="R">Rechts</button></div>':'<div class="kv"><span>Beamer-/Plattenposition</span><b>Mitte</b></div>';
-  const pad='<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap"><div><div class="lab">Rahmen + Fadenkreuz verschieben</div><div class="pad"><span></span><button data-act="calCenterNudge" data-arg="'+pid+',0,-1">↑</button><span></span><button data-act="calCenterNudge" data-arg="'+pid+',-1,0">←</button><button data-act="calCenterNudge" data-arg="'+pid+',0,1">↓</button><button data-act="calCenterNudge" data-arg="'+pid+',1,0">→</button></div></div><div><div class="lab">Schrittweite</div><div class="seg">'+[0.1,0.5,1,5].map(v=>'<button class="'+(c.roughStep===v?'on':'')+'" data-act="calRoughStep" data-arg="'+v+'">'+String(v).replace('.',',')+' cm</button>').join('')+'</div></div></div>';
+  const pad='<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap"><div><div class="lab">Kalibrierfläche verschieben</div><div class="pad"><span></span><button data-act="calCenterNudge" data-arg="'+pid+',0,-1">↑</button><span></span><button data-act="calCenterNudge" data-arg="'+pid+',-1,0">←</button><button data-act="calCenterNudge" data-arg="'+pid+',0,1">↓</button><button data-act="calCenterNudge" data-arg="'+pid+',1,0">→</button></div></div><div><div class="lab">Schrittweite</div><div class="seg">'+[1,5,20].map(v=>'<button class="'+(c.roughStep===v?'on':'')+'" data-act="calRoughStep" data-arg="'+v+'">'+v+' px</button>').join('')+'</div></div></div>';
   let h='';
   if(st===1){
     h+='<div class="card"><h4>Beamerposition wählen</h4><p class="hint">'+(two?'Bei der Doppelplattenpresse kalibrierst du Links und Rechts als zwei feste Mittelpunkte.':'Bei einer einzelnen Platte wird die mittlere Beamer-/Plattenposition verwendet.')+'</p>'+plateSel+'<div class="lab" style="margin-top:14px">Beamerbild drehen</div>'+segSet('outputRotation',[[0,'0°'],[90,'90°'],[180,'180°'],[270,'270°']])+'</div>';
   } else if(st===2){
-    h+='<div class="card"><h4>Mittelpunkt '+(two?(pid==='L'?'links':'rechts'):'Mitte')+' festlegen</h4><p class="hint">Der Hilfsrahmen ist nur zum Ausrichten. Passe seine Breite und Höhe ungefähr an deine echte Platte an und verschiebe anschließend Rahmen und Fadenkreuz gemeinsam, bis das Fadenkreuz exakt auf dem Plattenmittelpunkt liegt. Diese Hilfsgröße verändert den Maßstab nicht.</p>'+plateSel+'<div class="fg" style="margin-bottom:14px"><div class="f"><label>Hilfsrahmen Breite</label><input class="inp" type="number" min="5" step="1" data-cal="guideW" value="'+(+c.guideW||30)+'"></div><div class="f"><label>Hilfsrahmen Höhe</label><input class="inp" type="number" min="5" step="1" data-cal="guideH" value="'+(+c.guideH||30)+'"></div></div>'+pad+'</div>';
+    h+='<div class="card"><h4>Mittelpunkt '+(two?(pid==='L'?'links':'rechts'):'Mitte')+' festlegen</h4><p class="hint">Der Hilfsrahmen ist nur zum Ausrichten. Die große Kalibrierfläche mit den beiden Diagonalen ist unabhängig von der späteren Platte. Verschiebe sie, bis der Schnittpunkt exakt auf dem realen Plattenmittelpunkt liegt. Ihre Größe ist nur eine Sichthilfe und verändert weder Platte noch Maßstab.</p>'+plateSel+'<div class="fg" style="margin-bottom:14px"><div class="f"><label>Kalibrierfläche Breite (px)</label><input class="inp" type="number" min="120" step="10" data-cal="guideW" value="'+(+c.guideW||30)+'"></div><div class="f"><label>Kalibrierfläche Höhe (px)</label><input class="inp" type="number" min="120" step="10" data-cal="guideH" value="'+(+c.guideH||30)+'"></div></div>'+pad+'</div>';
   } else if(st===3){
     const q=Math.max(5,+c.sq||20);
     h+='<div class="card"><h4>Maßstab am gespeicherten Mittelpunkt</h4><p class="hint">Das Messquadrat sitzt exakt auf dem eben festgelegten Mittelpunkt. Miss seine reale Breite und Höhe. Nur der Maßstab wird korrigiert – der Mittelpunkt bleibt an derselben Beamerposition.</p>'+plateSel+'<div class="lab" style="margin-top:14px">Quadratgröße</div><div class="seg">'+[[10,'Size 1 · 10 cm'],[20,'Size 2 · 20 cm'],[30,'Size 3 · 30 cm']].map(([v,l])=>'<button class="'+(q===v?'on':'')+'" data-act="calSquareSize" data-arg="'+v+'">'+l+'</button>').join('')+'</div><div class="fg" style="margin-top:14px"><div class="f"><label>Real gemessene Breite (cm)</label><input class="inp" id="mW" type="number" min="1" step="0.1"></div><div class="f"><label>Real gemessene Höhe (cm)</label><input class="inp" id="mH" type="number" min="1" step="0.1"></div></div><button class="btn primary" style="margin-top:14px" data-act="calGlobalMeasure">Maßstab übernehmen</button></div>';
@@ -1784,7 +1784,7 @@ function initEditor() {
   S = {
     layout: normLayout(layout), view, plate: 'L', sel: [], tab: 'obj', step: 0.5, rotStep: 1, zoom: 1, K: 10,
     multi: false, open: {}, history: [], hi: -1, warned: false,
-    calib: { active: false, step: 1, plate: 'L', corner: 0, nudge: 5, roughStep: 0.5, sq: 20, guideW: 30, guideH: 30 },
+    calib: { active: false, step: 1, plate: 'L', corner: 0, nudge: 5, roughStep: 5, sq: 20, guideW: 520, guideH: 420 },
     beamerSize: LS.get('eps5-beamer-size', { w: 1920, h: 1080 })
   };
   try { bc = new BroadcastChannel('eps5'); } catch (e) { bc = null; }
