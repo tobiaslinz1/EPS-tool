@@ -214,6 +214,11 @@ details.grp>.gb{padding-bottom:16px}
 .name{font-size:18px;font-weight:600;border:0;background:transparent;padding:3px 0;width:100%;outline:none;border-bottom:1px solid transparent;letter-spacing:-.2px}
 .name:focus{border-bottom-color:var(--accent)}
 .sub2{font-size:12.5px;color:var(--text2);margin-top:2px}
+.insp-title-row{display:flex;align-items:center;gap:8px}
+.insp-title-row .name{flex:1;min-width:0}
+.insp-del{width:34px;height:34px;min-width:34px;border-radius:9px;display:grid;place-items:center;color:var(--red);background:rgba(255,59,48,.07);font-size:16px;touch-action:manipulation}
+.insp-del:hover{background:rgba(255,59,48,.12)}
+.insp-del:active{transform:scale(.94);background:rgba(255,59,48,.18)}
 
 
 .rail{position:absolute;top:16px;left:16px;z-index:6;display:flex;flex-direction:column;gap:2px;padding:6px;background:#fff;border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.10),0 0 0 1px var(--line);max-height:calc(100% - 100px);overflow-y:auto}
@@ -1033,8 +1038,11 @@ function renderInsp() {
   el.innerHTML = sel[0].k === 's' ? inspShape(sel[0].o) : inspLine(sel[0].o);
 }
 function headHTML(o, typeName, extra) {
+  const key = S.sel.length === 1 ? S.sel[0] : '';
   return '<button class="back" data-act="deselect">‹ Alle Objekte</button>' +
-    '<div class="sec" style="margin-top:8px"><input class="name" data-p="name" value="' + esc(o.name) + '" placeholder="' + typeName + '" aria-label="Name"><div class="sub2">' + typeName + (o.locked ? ', gesperrt' : '') + (extra || '') + '</div></div>';
+    '<div class="sec" style="margin-top:8px"><div class="insp-title-row"><input class="name" data-p="name" value="' + esc(o.name) + '" placeholder="' + typeName + '" aria-label="Name">' +
+    (key ? '<button class="insp-del" data-act="quickDel" data-arg="' + key + '" title="Element löschen" aria-label="Element löschen">✕</button>' : '') +
+    '</div><div class="sub2">' + typeName + (o.locked ? ', gesperrt' : '') + (extra || '') + '</div></div>';
 }
 function inspNone() {
   const d = dims(), pl = P(), inf = pl.info;
