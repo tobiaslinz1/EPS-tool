@@ -727,7 +727,14 @@ function calibOverlaySVG(su, c, W, H, pids) {
   } else if (c.step === 2 || c.step === 3) {
     for (const pid of pids) {
       const cs = cornersOf(su, pid).map(p => ({ x: p.x * W, y: p.y * H }));
+      if(c.step===2){
+        const col=pid===c.plate?'#ff9f0a':'rgba(255,255,255,.45)', cen={x:cs.reduce((a,p)=>a+p.x,0)/4,y:cs.reduce((a,p)=>a+p.y,0)/4};
+        s+='<polygon points="'+cs.map(p=>p.x+','+p.y).join(' ')+'" fill="'+(pid===c.plate?'rgba(255,159,10,.08)':'none')+'" stroke="'+col+'" stroke-width="'+(pid===c.plate?5:2)+'"/>';
+        s+='<line x1="'+(cen.x-35)+'" y1="'+cen.y+'" x2="'+(cen.x+35)+'" y2="'+cen.y+'" stroke="'+col+'" stroke-width="3"/><line x1="'+cen.x+'" y1="'+(cen.y-35)+'" x2="'+cen.x+'" y2="'+(cen.y+35)+'" stroke="'+col+'" stroke-width="3"/><circle cx="'+cen.x+'" cy="'+cen.y+'" r="9" fill="none" stroke="'+col+'" stroke-width="3"/>';
+        s+='<text x="'+cen.x+'" y="'+(cen.y+58)+'" fill="'+col+'" font-size="20" text-anchor="middle" font-weight="700">PLATTE '+pid+' · '+su.plates[pid].w+' × '+su.plates[pid].h+' cm</text>';
+      }
       cs.forEach((p, i) => {
+        if(c.step===2 && pid!==c.plate) return;
         const act = c.step === 3 && c.plate === pid && (c.corner === i || c.corner === 4);
         s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (act ? 14 : 9) + '" fill="' + (act ? '#ff9f0a' : 'none') + '" stroke="' + (act ? '#ff9f0a' : '#fff') + '" stroke-width="2"/>';
         s += '<line x1="' + (p.x - 22) + '" y1="' + p.y + '" x2="' + (p.x + 22) + '" y2="' + p.y + '" stroke="' + (act ? '#ff9f0a' : '#fff') + '" stroke-width="1"/><line x1="' + p.x + '" y1="' + (p.y - 22) + '" x2="' + p.x + '" y2="' + (p.y + 22) + '" stroke="' + (act ? '#ff9f0a' : '#fff') + '" stroke-width="1"/>';
@@ -1299,6 +1306,19 @@ const ACT = {
   closeCalib() { S.calib.active = false; syncLive(true); $('#calib').classList.remove('open'); renderAll(); toast('Kalibrierung gespeichert'); },
   calStep(n) { S.calib.step = clamp(+n, 1, 4); syncLive(true); renderCalib(); },
   calPlate(p) { S.calib.plate = p; syncLive(true); renderCalib(); },
+  calRoughStep(v) { S.calib.roughStep=+v; renderCalib(); },
+  calRoughNudge(a) {
+    const [dx,dy]=a.split(',').map(Number), p=setup.plates[S.calib.plate], st=+S.calib.roughStep||0.5;
+    p.corners=null; p.x=r2((+p.x||0)+dx*st); p.y=r2((+p.y||0)+dy*st);
+    if(S.calib.plate==='L') normalizePlates();
+    saveSetup(); syncLive(true); renderCalib();
+  },
+  calCenterPlate() {
+    const p=setup.plates[S.calib.plate]; p.corners=null;
+    p.x=r2((setup.area.w-p.w)/2); p.y=r2((setup.area.h-p.h)/2);
+    if(S.calib.plate==='L') normalizePlates();
+    saveSetup(); syncLive(true); renderCalib(); toast('Plattenrahmen im Beamerbild zentriert');
+  },
   calCorner(i) { S.calib.corner = +i; syncLive(true); renderCalib(); },
   calNudgeStep(v) { S.calib.nudge = +v; renderCalib(); },
   calNudge(a) {
@@ -1457,7 +1477,7 @@ function renderSettings() {
 /* ---------- Kalibrierung ---------- */
 function renderCalib() {
   const c = S.calib, st = c.step, two = setup.twoPlates;
-  const steps = [[1, 'Montage'], [2, 'Platten'], [3, 'Feinlage'], [4, 'Maßkontrolle']];
+  const steps = [[1, 'Beamer'], [2, 'Platte finden'], [3, 'Feinlage'], [4, 'Maßkontrolle']];
   $('#calibHead').innerHTML = '<h2>Kalibrierung</h2><div class="seg">' + steps.map(([n, l]) => '<button class="' + (st === n ? 'on' : '') + '" data-act="calStep" data-arg="' + n + '">' + n + '. ' + l + '</button>').join('') + '</div>';
   const plateSeg = two ? '<div class="seg" style="margin-bottom:14px"><button class="' + (c.plate === 'L' ? 'on' : '') + '" data-act="calPlate" data-arg="L">Platte links</button><button class="' + (c.plate === 'R' ? 'on' : '') + '" data-act="calPlate" data-arg="R">Platte rechts</button></div>' : '';
   const bs = S.beamerSize;
@@ -1469,14 +1489,14 @@ function renderCalib() {
       '<div class="fg"><div class="f"><label>Abstand Linse bis Tisch (cm)</label><input class="inp" type="number" id="calH" value="100" step="1"></div><div class="f"><label>Throw Ratio</label><input class="inp" type="number" id="calTR" value="1.2" step="0.01"></div><div class="f"><label>Bildformat</label><select class="inp" id="calAR"><option>16:9</option><option>16:10</option><option>4:3</option></select></div></div>' +
       '<div style="margin-top:12px"><button class="btn sm" data-act="calcArea">Fläche berechnen</button></div></div>';
   } else if (st === 2) {
-    h += '<div class="card"><h4>Platten auf dem Tisch</h4><p class="hint">Abstände in cm, gemessen vom linken und oberen Rand der Projektionsfläche. Solange die Ecken nicht feinjustiert sind, folgt die Projektion diesen Werten sofort.</p>' +
-      '<label class="chk" style="margin-bottom:14px"><input type="checkbox" data-set="twoPlates"' + (two ? ' checked' : '') + '> Zweite Platte (Doppelplattenpresse)</label>' +
-      '<div class="lab">Platte links</div><div class="fg" style="margin-bottom:14px">' + fld('Breite (cm)', 'plates.L.w', 0.5, 5) + fld('Höhe (cm)', 'plates.L.h', 0.5, 5) + fld('Abstand von links (cm)', 'plates.L.x', 0.5) + fld('Abstand von oben (cm)', 'plates.L.y', 0.5) + '</div>' +
-      (two ? '<div class="lab">Platte rechts</div><div class="fg">' + fld('Breite (cm)', 'plates.R.w', 0.5, 5) + fld('Höhe (cm)', 'plates.R.h', 0.5, 5) + fld('Lücke zur linken Platte (cm)', 'gap', 0.5) + fld('Abstand von oben (cm)', 'plates.R.y', 0.5) + '</div>' : '') +
-      '</div>';
-    const fine = platesOf(setup).filter(p => setup.plates[p].corners).length;
-    h += '<div class="card"><div class="row"><div style="flex:1"><h4>Grobkalibrierung</h4><p class="hint">' + (fine ? 'Die Ecken sind bereits feinjustiert. Änderungen an den Maßen wirken erst, wenn du neu berechnest.' : 'Die Projektion folgt direkt den Maßen oben.') + '</p></div>' +
-      (fine ? '<button class="btn sm" data-act="roughApply">Aus Maßen neu berechnen</button>' : '<span class="badge">aktiv</span>') + '</div></div>';
+    const p=setup.plates[c.plate];
+    h += '<div class="card"><h4>Platte auf dem Beamer finden</h4><p class="hint">Lege die echte Platte ein. Stelle zuerst ihre reale Größe ein und schiebe anschließend den farbigen Rahmen, bis Mittelpunkt und Außenkante ungefähr auf der Platte liegen. Hier geht es nur um die Grobposition – die Ecken kommen im nächsten Schritt.</p>' +
+      '<label class="chk" style="margin-bottom:14px"><input type="checkbox" data-set="twoPlates"' + (two ? ' checked' : '') + '> Zweite Platte (Doppelplattenpresse)</label>' + plateSeg +
+      '<div class="fg" style="margin-bottom:14px">' + fld('Plattenbreite (cm)','plates.'+c.plate+'.w',0.5,5) + fld('Plattenhöhe (cm)','plates.'+c.plate+'.h',0.5,5) + '</div>' +
+      '<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap"><div><div class="lab">Rahmen verschieben</div><div class="pad"><span></span><button data-act="calRoughNudge" data-arg="0,-1">↑</button><span></span><button data-act="calRoughNudge" data-arg="-1,0">←</button><button data-act="calRoughNudge" data-arg="0,1">↓</button><button data-act="calRoughNudge" data-arg="1,0">→</button></div></div>' +
+      '<div><div class="lab">Schrittweite</div><div class="seg">' + [0.1,0.5,1,5].map(v=>'<button class="'+(c.roughStep===v?'on':'')+'" data-act="calRoughStep" data-arg="'+v+'">'+String(v).replace('.',',')+' cm</button>').join('') + '</div><p class="hint" style="margin-top:10px">Position: X '+fmt(p.x)+' cm · Y '+fmt(p.y)+' cm</p></div></div>' +
+      (two?'<hr><div class="fg" style="margin-top:14px">'+fld('Freier Abstand zwischen den Platten (cm)','gap',0.5,0)+'</div><p class="hint">Bei Platte rechts wird die Grundposition automatisch aus linker Platte + Plattenbreite + Abstand berechnet. Danach kannst du rechts separat feinjustieren.</p>':'') +
+      '<div class="row" style="margin-top:14px"><button class="btn sm" data-act="calCenterPlate">Ausgewählte Platte im Beamerbild zentrieren</button><span class="spacer"></span><button class="btn sm primary" data-act="calStep" data-arg="3">Weiter zur Feinlage →</button></div></div>';
   } else if (st === 3) {
     const cn = [['↖', 0], ['↗', 1], ['↙', 3], ['↘', 2]];
     h += '<div class="calgrid"><div><div class="card"><h4>Ecken auf die echten Plattenkanten setzen</h4><p class="hint">Wähle eine Ecke und schiebe sie mit den Pfeilen, bis das orange Kreuz genau auf der Plattenecke liegt. Oder ziehe die Punkte in der Vorschau rechts.</p>' + plateSeg +
@@ -1775,7 +1795,7 @@ function initEditor() {
   S = {
     layout: normLayout(layout), view, plate: 'L', sel: [], tab: 'obj', step: 0.5, rotStep: 1, zoom: 1, K: 10,
     multi: false, open: {}, history: [], hi: -1, warned: false,
-    calib: { active: false, step: 1, plate: 'L', corner: 0, nudge: 5, sq: 10 },
+    calib: { active: false, step: 1, plate: 'L', corner: 0, nudge: 5, roughStep: 0.5, sq: 10 },
     beamerSize: LS.get('eps5-beamer-size', { w: 1920, h: 1080 })
   };
   try { bc = new BroadcastChannel('eps5'); } catch (e) { bc = null; }
