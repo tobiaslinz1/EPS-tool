@@ -1065,7 +1065,7 @@ function inspShape(o) {
   h += moveBlock(true);
   h += '<div class="sec">' + sliderRow('Breite', 'w', o.w, 0.3, maxS, 0.1, 'cm') + sliderRow('Höhe', 'h', o.h, 0.3, maxS, 0.1, 'cm') +
     '<button class="btn sm' + (o.lockRatio ? ' on' : '') + '" data-act="ratio">' + (o.lockRatio ? '🔒 Seitenverhältnis gesperrt' : '🔓 Seitenverhältnis frei') + '</button></div>';
-  h += grp('objinfo','Objekt-Info',o.info?'wird projiziert':'','<p class="hint" style="margin-bottom:8px">Produktionshinweis direkt am Objekt. Standardmäßig zentriert, alternativ außen platzierbar.</p><textarea class="inp" data-p="info" placeholder="z. B. DTF, 8 cm breit, Brust links">'+esc(o.info||'')+'</textarea><label class="chk" style="margin-top:8px"><input type="checkbox" data-obj-showinfo '+(o.showInfo!==false?'checked':'')+'> Info projizieren</label><div class="f" style="margin-top:10px"><label>Position</label><select class="inp" data-p="infoPos">'+[['center','Innen zentriert'],['top','Oberhalb'],['bottom','Unterhalb'],['left','Links außen'],['right','Rechts außen']].map(([v,l])=>'<option value="'+v+'"'+((o.infoPos||'center')===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div><div class="grid2" style="margin-top:10px"><div class="f"><label>Schriftgröße (px)</label><input class="inp" type="number" min="8" max="36" step="1" data-p="infoSize" value="'+(+o.infoSize||12)+'"></div><div class="f"><label>Farbe</label><input type="color" data-p="infoColor" value="'+(o.infoColor||'#ffffff')+'" style="width:100%;height:38px;border:none;background:none;padding:0;cursor:pointer"></div></div>');
+  h += grp('objinfo','Objekt-Info',o.info?'wird projiziert':'','<p class="hint" style="margin-bottom:8px">Produktionshinweis direkt am Objekt. Standardmäßig zentriert, alternativ außen platzierbar.</p><textarea class="inp" data-p="info" placeholder="z. B. DTF, 8 cm breit, Brust links">'+esc(o.info||'')+'</textarea><label class="chk" style="margin-top:8px"><input type="checkbox" data-obj-showinfo '+(o.showInfo!==false?'checked':'')+'> Info projizieren</label><div class="f" style="margin-top:10px"><label>Position</label><select class="inp" data-p="infoPos">'+[['center','Innen zentriert'],['top','Oberhalb'],['bottom','Unterhalb'],['left','Links außen'],['right','Rechts außen']].map(([v,l])=>'<option value="'+v+'"'+((o.infoPos||'center')===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div><div style="margin-top:10px"><div class="lab">Schriftgröße</div><div class="seg full" style="margin-bottom:7px">'+[8,10,12,14,16,18,20,24].map(v=>'<button class="'+((+o.infoSize||12)===v?'on':'')+'" data-act="objInfoSize" data-arg="'+v+'">'+v+'</button>').join('')+'</div><div class="grid2"><div class="f"><label>Direkte Eingabe (px)</label><input class="inp" type="number" min="8" max="36" step="1" data-p="infoSize" value="'+(+o.infoSize||12)+'" inputmode="decimal"></div><div class="f"><label>Farbe</label><input type="color" data-p="infoColor" value="'+(o.infoColor||'#ffffff')+'" style="width:100%;height:38px;border:none;background:none;padding:0;cursor:pointer"></div></div></div>');
   if (!img) h += '<div class="sec"><div class="lab">Farbe</div>' + colorRow(o.color) + '</div>';
   h += grp('align', 'Ausrichten', '', alignHTML('s'));
   h += grp('exact', 'Genaue Werte', fmt(o.x) + ' × ' + fmt(o.y) + ' cm',
@@ -1306,6 +1306,7 @@ const ACT = {
   zoom(a) { a = +a; S.zoom = a === 0 ? 1 : clamp(r2(S.zoom + a * 0.25), 0.5, 4); renderDock(); renderCanvas(); },
   infopos(a) { P().info.pos = a; commit(); renderCanvas(); renderInsp(); },
   infocolor(c) { P().info.color = c; commit(); renderCanvas(); renderInsp(); },
+  objInfoSize(v){const s=one();if(!s||s.k!=='s')return;s.o.infoSize=clamp(+v||12,8,36);commit();renderCanvas();renderInsp();},
   openBeamer() {
     syncLive(true);
     const url = location.href.split('#')[0] + '#beamer';
@@ -1532,6 +1533,10 @@ function fld(label, path, step, min) {
   const v = getDeep(setup, path);
   return '<div class="f"><label>' + label + '</label><input class="inp" type="number" step="' + (step || 0.1) + '"' + (min != null ? ' min="' + min + '"' : '') + ' data-set="' + path + '" value="' + v + '"></div>';
 }
+function quickFld(label,path,vals,step,min,unit){
+  const cur=getDeep(setup,path);
+  return '<div class="f"><label>'+label+'</label><div class="seg full" style="margin-bottom:7px">'+vals.map(v=>'<button class="'+(Math.abs((+cur)-v)<1e-6?'on':'')+'" data-act="setv" data-arg="'+path+'='+v+'">'+v+(unit||'')+'</button>').join('')+'</div><input class="inp" type="number" step="'+(step||1)+'"'+(min!=null?' min="'+min+'"':'')+' data-set="'+path+'" value="'+cur+'" inputmode="decimal"></div>';
+}
 function colorFld(label, path) {
   return '<div class="f"><label>' + label + '</label><input type="color" data-set="' + path + '" value="' + getDeep(setup, path) + '" style="width:100%;height:38px;border:none;background:none;padding:0;cursor:pointer"></div>';
 }
@@ -1553,35 +1558,35 @@ function renderSettings() {
     '<div class="f"><label>Starke Rasterlinie alle</label><select class="inp" data-set="gridMajor">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridMajor===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
     '<div class="f"><label>Maßzahl anzeigen alle</label><select class="inp" data-set="gridLabelEvery">'+[1,2,5,10].map(v=>'<option value="'+v+'"'+(+setup.gridLabelEvery===v?' selected':'')+'>'+v+' cm</option>').join('')+'</select></div>'+
     '<div class="f"><label>Nachkommastellen</label><select class="inp" data-set="gridDecimals">'+[0,1,2].map(v=>'<option value="'+v+'"'+(+setup.gridDecimals===v?' selected':'')+'>'+v+'</option>').join('')+'</select></div>'+
-    fld('Schriftgröße Maßzahlen','gridFont',1,6)+colorFld('Schriftfarbe Maßzahlen','gridLabelColor')+colorFld('Rasterfarbe','gridColor')+
+    quickFld('Schriftgröße Maßzahlen','gridFont',[8,10,12,14,16,18,20],1,6,'')+colorFld('Schriftfarbe Maßzahlen','gridLabelColor')+colorFld('Rasterfarbe','gridColor')+
     fld('Seitliche Zahlen X (cm)','gridLabelSideX',0.1)+fld('Seitliche Zahlen Y (cm)','gridLabelSideY',0.1)+fld('Obere Zahlen X (cm)','gridLabelTopX',0.1)+fld('Obere Zahlen Y (cm)','gridLabelTopY',0.1)+
     fld('Deckkraft feine Linien','gridMinorOpacity',0.05,0)+fld('Deckkraft starke Linien','gridMajorOpacity',0.05,0)+'</div><p class="hint" style="margin-top:10px">Seitliche Zahlen: X verschiebt nach rechts/links, Y nach unten/oben. Obere Zahlen: X seitlich, Y nach unten/oben. Negative Y-Werte schieben die oberen Zahlen weiter nach oben.</p></div>';
 
   h += '<div class="card"><h4>Projektionsqualität</h4><p class="hint">Feinabstimmung für kleine Schrift und dünne Linien auf dem Beamer. Die optische Fokussierung des Beamers bleibt entscheidend.</p>'+
     '<div class="fg"><div class="f"><label>Schriftgewicht</label><select class="inp" data-set="projectionWeight">'+[[400,'400 Normal'],[500,'500 Medium'],[600,'600 Semibold'],[700,'700 Bold']].map(([v,l])=>'<option value="'+v+'"'+(+setup.projectionWeight===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>'+
-    fld('Textkontur (px)','projectionTextStroke',0.1,0)+colorFld('Textkontur Farbe','projectionTextStrokeColor')+
+    quickFld('Textkontur (px)','projectionTextStroke',[0,0.2,0.4,0.6,0.8,1],0.1,0,'')+colorFld('Textkontur Farbe','projectionTextStrokeColor')+
     '<div class="f"><label>Kontrast</label><input class="inp" type="number" min="0.7" max="1.6" step="0.05" data-set="projectionContrast" value="'+(+setup.projectionContrast||1)+'"></div></div>'+
     '<label class="chk" style="margin-top:12px"><input type="checkbox" data-set="projectionPixelSnap"'+(setup.projectionPixelSnap?' checked':'')+'> Maßzahlen pixelgenau ausrichten</label>'+
     '<p class="hint" style="margin-top:8px">Empfehlung zum Start: Arial oder Verdana, Gewicht 600, Textkontur 0–0,3 px, Kontrast 1,0–1,1. Zu viel Kontur oder Kontrast kann wieder unschärfer wirken.</p></div>';
 
   h += '<div class="card"><h4>Maßanzeigen / Info</h4><p class="hint">Steuert projizierte Positionswerte und die Info-Ansicht.</p>'+
     '<label class="chk" style="margin-bottom:12px"><input type="checkbox" data-set="measureLabels.showLineValues"'+(setup.measureLabels.showLineValues!==false?' checked':'')+'> Werte an H-/V-Linien auf dem Beamer anzeigen</label>'+
-    '<div class="fg">'+fld('Schriftgröße Linienwerte','measureLabels.font',1,8)+colorFld('Farbe Linienwerte','measureLabels.color')+fld('Schriftgröße Info-Maße','infoDims.font',1,8)+fld('Linienstärke Info-Maße','infoDims.stroke',0.25,0.5)+colorFld('Farbe Info-Maße','infoDims.color')+'</div></div>';
+    '<div class="fg">'+quickFld('Schriftgröße Linienwerte','measureLabels.font',[8,10,12,14,16,18,20,24],1,8,'')+colorFld('Farbe Linienwerte','measureLabels.color')+quickFld('Schriftgröße Info-Maße','infoDims.font',[8,10,12,14,16,18,20,24],1,8,'')+quickFld('Linienstärke Info-Maße','infoDims.stroke',[0.5,0.75,1,1.25,1.5,2],0.25,0.5,'')+colorFld('Farbe Info-Maße','infoDims.color')+'</div></div>';
 
   h += '<div class="card"><h4>Textilrichtung</h4><p class="hint">Wie das Textil auf der Presse liegt. Lineal und HSP-Linie richten sich danach aus.</p>' + segSet('direction', [['up', 'Kragen oben'], ['down', 'Kragen unten']]) + '</div>';
 
   h += '<div class="card"><h4>Außenlinien / Textilausrichtung</h4><p class="hint">Die Linien liegen immer relativ zur aktuellen Plattengröße. Beim Umrüsten auf eine kleinere Platte rücken sie automatisch mit. H-/V-Hilfslinien dürfen nur um den eingestellten Überstand über die Platte hinausragen.</p>'+
-    '<div class="fg">'+fld('Überstand Hilfslinien (cm)','outerGuides.extend',0.5,0)+fld('Linienstärke (px)','outerGuides.width',1,0.5)+colorFld('Farbe','outerGuides.color')+'</div>'+ '<label class="chk" style="margin:12px 0"><input type="checkbox" data-set="outerGuides.showLabels"'+(setup.outerGuides.showLabels!==false?' checked':'')+'> Maße an Außenlinien anzeigen</label><div class="fg">'+fld('Schriftgröße Außenmaße','outerGuides.labelFont',1,8)+colorFld('Farbe Außenmaße','outerGuides.labelColor')+'</div>'+
+    '<div class="fg">'+fld('Überstand Hilfslinien (cm)','outerGuides.extend',0.5,0)+quickFld('Linienstärke (px)','outerGuides.width',[0.5,1,1.5,2,3,4],0.5,0.5,'')+colorFld('Farbe','outerGuides.color')+'</div>'+ '<label class="chk" style="margin:12px 0"><input type="checkbox" data-set="outerGuides.showLabels"'+(setup.outerGuides.showLabels!==false?' checked':'')+'> Maße an Außenlinien anzeigen</label><div class="fg">'+quickFld('Schriftgröße Außenmaße','outerGuides.labelFont',[8,10,12,14,16,18,20,24],1,8,'')+colorFld('Farbe Außenmaße','outerGuides.labelColor')+'</div>'+
     '<div class="lab" style="margin-top:12px">Parallele Außenlinien</div>'+
     '<div id="outerGuideRows">'+(setup.outerGuides.lines||[]).map((v,i)=>'<div class="row" style="margin:6px 0"><input class="inp" type="number" step="0.5" min="0.1" data-set="outerGuides.lines.'+i+'" value="'+v+'"><span>cm außerhalb</span><button class="btn sm danger" data-act="outerGuideDel" data-arg="'+i+'">✕</button></div>').join('')+'</div>'+
     '<button class="btn sm" data-act="outerGuideAdd">Außenlinie hinzufügen</button></div>';
 
   h += '<div class="card"><h4>HSP-Lineal</h4><p class="hint">Senkrechte Messlinie ab dem Hals-Schulter-Punkt, zum Platzieren von Brust- und Rückenmotiven.</p>' +
     '<div class="lab">Nullpunkt</div><div style="margin-bottom:14px">' + segSet('hsp.placement', [['on', 'Auf der Platte'], ['above', 'Oberhalb der Platte']]) + '</div>' +
-    '<div class="fg">' + fld('Versatz zur Mitte (cm)', 'hsp.x') + fld('Abstand Nullpunkt (cm)', 'hsp.start') + fld('Länge (cm)', 'hsp.length', 1, 1) + fld('Teilung (cm)', 'hsp.tick', 0.1, 0.1) + fld('Linienstärke (px)', 'hsp.width', 1, 1) + fld('Schriftgröße', 'hsp.font', 1, 6) + colorFld('Farbe', 'hsp.color') + '</div></div>';
+    '<div class="fg">' + fld('Versatz zur Mitte (cm)', 'hsp.x') + fld('Abstand Nullpunkt (cm)', 'hsp.start') + fld('Länge (cm)', 'hsp.length', 1, 1) + fld('Teilung (cm)', 'hsp.tick', 0.1, 0.1) + quickFld('Linienstärke (px)','hsp.width',[1,1.5,2,3,4],0.5,0.5,'') + quickFld('Schriftgröße','hsp.font',[8,10,12,14,16,18,20],1,6,'') + colorFld('Farbe', 'hsp.color') + '</div></div>';
 
   h += '<div class="card"><h4>Fadenkreuz</h4><p class="hint">Vorpositionier-Kreuz mit Skala und Innenquadrat, ausgehend von der Plattenmitte.</p>' +
-    '<div class="fg">' + fld('Versatz X (cm)', 'cross.x') + fld('Versatz Y (cm)', 'cross.y') + fld('Innenquadrat (cm)', 'cross.inner', 0.5, 0) + fld('Armlänge (cm)', 'cross.arm', 1, 1) + fld('Rasterung (cm)', 'cross.raster', 0.1, 0.1) + fld('Linienstärke (px)', 'cross.width', 1, 1) + fld('Schriftgröße', 'cross.font', 1, 6) +
+    '<div class="fg">' + fld('Versatz X (cm)', 'cross.x') + fld('Versatz Y (cm)', 'cross.y') + fld('Innenquadrat (cm)', 'cross.inner', 0.5, 0) + fld('Armlänge (cm)', 'cross.arm', 1, 1) + fld('Rasterung (cm)', 'cross.raster', 0.1, 0.1) + quickFld('Linienstärke (px)','cross.width',[1,1.5,2,3,4],0.5,0.5,'') + quickFld('Schriftgröße','cross.font',[8,10,12,14,16,18,20],1,6,'') +
     colorFld('Kreuz', 'cross.c1') + colorFld('Innenquadrat', 'cross.c2') + colorFld('Teilstriche', 'cross.c3') + colorFld('Zahlen', 'cross.c4') + '</div></div>';
 
   h += '<div class="card"><h4>Lineal-Vorlage</h4><p class="hint">Feste Hilfslinien, die mit „Lineal“ eingeblendet werden. Abstände in cm vom gewählten Rand, Länge 0 = ganze Platte. „Spiegeln“ setzt die Linie zusätzlich auf die Gegenseite.</p>' +
