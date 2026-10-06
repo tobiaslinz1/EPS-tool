@@ -631,30 +631,28 @@ function outerGuidesSVG(w,h,su,px){
   return s;
 }
 function infoDimsSVG(pl,w,h,px,su){
-  const I=(su&&su.infoDims)||{}, col=I.color||'#ff2d95', fsPx=Math.max(9,+I.font||13), swPx=Math.max(1,+I.stroke||1.25);
-  const fs=fsPx*px, sw=swPx*px, tick=Math.max(4*px,.18), cx=w/2;
+  const I=(su&&su.infoDims)||{}, col=I.color||'#ff2d95';
+  const fs=Math.max(10,+I.font||13)*px;
+  const sw=Math.max(1,+I.stroke||1.25)*px;
+  const tick=Math.max(5*px,.22), cx=w/2;
   let s='';
-  const objs=(pl.shapes||[]);
-  for(const o of objs){
-    const bb=rotBBox(o),x=o.x,y=o.y,left=x-bb.w/2,right=x+bb.w/2,top=y-bb.h/2,bottom=y+bb.h/2;
+  for(const o of (pl.shapes||[])){
+    const bb=rotBBox(o),x=o.x,y=o.y,top=y-bb.h/2,bottom=y+bb.h/2,right=x+bb.w/2;
     const xv=r2(x-cx), yv=r2(h-y);
-    const yDim=clamp(bottom+Math.max(.8,10*px),.8,h-.8);
-    const xDim=clamp(right+Math.max(.8,10*px),.8,w-.8);
-    s+='<g pointer-events="none" opacity="1">';
-    // X from platen center
-    s+='<line x1="'+cx+'" y1="'+yDim+'" x2="'+x+'" y2="'+yDim+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
-    s+='<line x1="'+cx+'" y1="'+(yDim-tick)+'" x2="'+cx+'" y2="'+(yDim+tick)+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
-    s+='<line x1="'+x+'" y1="'+(yDim-tick)+'" x2="'+x+'" y2="'+(yDim+tick)+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
-    s+='<rect x="'+((cx+x)/2-Math.max(1.4,18*px))+'" y="'+(yDim-Math.max(1.15,15*px))+'" width="'+Math.max(2.8,36*px)+'" height="'+Math.max(1.0,14*px)+'" rx="'+Math.max(.2,3*px)+'" fill="#fff" opacity=".92"/>';
-    s+='<text x="'+((cx+x)/2)+'" y="'+(yDim-Math.max(.45,6*px))+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" font-weight="700" style="stroke:none">X '+(xv>0?'+':'')+fmt(xv)+' cm</text>';
-    // Y from front/body edge
-    s+='<line x1="'+xDim+'" y1="'+h+'" x2="'+xDim+'" y2="'+y+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
-    s+='<line x1="'+(xDim-tick)+'" y1="'+h+'" x2="'+(xDim+tick)+'" y2="'+h+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
-    s+='<line x1="'+(xDim-tick)+'" y1="'+y+'" x2="'+(xDim+tick)+'" y2="'+y+'" stroke="'+col+'" stroke-width="'+sw+'" vector-effect="non-scaling-stroke"/>';
-    s+='<rect x="'+(xDim+Math.max(.25,3*px))+'" y="'+((h+y)/2-Math.max(.5,7*px))+'" width="'+Math.max(3.5,44*px)+'" height="'+Math.max(1.0,14*px)+'" rx="'+Math.max(.2,3*px)+'" fill="#fff" opacity=".92"/>';
-    s+='<text x="'+(xDim+Math.max(.45,6*px))+'" y="'+((h+y)/2)+'" fill="'+col+'" font-size="'+fs+'" dominant-baseline="middle" font-weight="700" style="stroke:none">Y '+fmt(yv)+' cm</text>';
-    // Object size, subtle technical cue
-    s+='<text x="'+x+'" y="'+clamp(top-Math.max(.5,6*px),.8,h-.8)+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" font-weight="650" style="stroke:none">'+fmt(o.w)+' × '+fmt(o.h)+' cm</text>';
+    const yDim=clamp(bottom+Math.max(.8,12*px),.8,h-.8);
+    const xDim=clamp(right+Math.max(.8,12*px),.8,w-.8);
+    s+='<g pointer-events="none">';
+    s+='<line x1="'+cx+'" y1="'+yDim+'" x2="'+x+'" y2="'+yDim+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+cx+'" y1="'+(yDim-tick)+'" x2="'+cx+'" y2="'+(yDim+tick)+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+x+'" y1="'+(yDim-tick)+'" x2="'+x+'" y2="'+(yDim+tick)+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<rect x="'+((cx+x)/2-Math.max(1.6,20*px))+'" y="'+(yDim-Math.max(1.3,16*px))+'" width="'+Math.max(3.2,40*px)+'" height="'+Math.max(1.15,15*px)+'" rx="'+Math.max(.2,3*px)+'" fill="#fff" opacity=".94"/>';
+    s+='<text x="'+((cx+x)/2)+'" y="'+(yDim-Math.max(.48,6*px))+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" font-weight="700" style="stroke:none">X '+(xv>0?'+':'')+fmt(xv)+' cm</text>';
+    s+='<line x1="'+xDim+'" y1="'+h+'" x2="'+xDim+'" y2="'+y+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+(xDim-tick)+'" y1="'+h+'" x2="'+(xDim+tick)+'" y2="'+h+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<line x1="'+(xDim-tick)+'" y1="'+y+'" x2="'+(xDim+tick)+'" y2="'+y+'" stroke="'+col+'" stroke-width="'+sw+'"/>';
+    s+='<rect x="'+(xDim+Math.max(.3,4*px))+'" y="'+((h+y)/2-Math.max(.55,7*px))+'" width="'+Math.max(4,48*px)+'" height="'+Math.max(1.15,15*px)+'" rx="'+Math.max(.2,3*px)+'" fill="#fff" opacity=".94"/>';
+    s+='<text x="'+(xDim+Math.max(.5,7*px))+'" y="'+((h+y)/2)+'" fill="'+col+'" font-size="'+fs+'" dominant-baseline="middle" font-weight="700" style="stroke:none">Y '+fmt(yv)+' cm</text>';
+    s+='<text x="'+x+'" y="'+clamp(top-Math.max(.55,7*px),.8,h-.8)+'" fill="'+col+'" font-size="'+fs+'" text-anchor="middle" font-weight="650" style="stroke:none">'+fmt(o.w)+' × '+fmt(o.h)+' cm</text>';
     s+='</g>';
   }
   return s;
@@ -888,7 +886,7 @@ function renderTop() {
     '<button class="btn sm" data-act="pop" data-arg="platePop">' + (two?(S.plate==='L'?'Platte links · ':'Platte rechts · '):'Platte · ') + fmt(dims().w) + ' × ' + fmt(dims().h) + ' cm&nbsp; ⚙︎</button>' +
     (S.layout.sizeProfiles && S.layout.sizeProfiles.enabled && S.layout.sizeProfiles.active ? '<button class="btn sm on" data-act="pop" data-arg="sizesPop">Größe ' + esc(S.layout.sizeProfiles.active) + '</button>' : '<button class="btn sm" data-act="pop" data-arg="sizesPop">Größen</button>') +
     '<div class="spacer"></div>' +
-    '<button class="iconbtn' + (S.view.infoDims ? ' on' : '') + '" data-act="view" data-arg="infoDims" title="Info-Ansicht: Objektmaße anzeigen" aria-label="Info-Ansicht"><b style="font-family:serif">i</b></button>' +
+    '<button class="iconbtn' + (S.view.infoDims ? ' on' : '') + '" data-act="toggleInfoDims" title="Info-Bemaßung ein-/ausblenden" aria-label="Info-Bemaßung"><b style="font-family:serif">i</b></button>' +
     '<button class="iconbtn" data-act="undo" ' + (S.hi <= 0 ? 'disabled' : '') + ' title="Rückgängig (Strg+Z)" aria-label="Rückgängig">↩</button>' +
     '<button class="iconbtn" data-act="redo" ' + (S.hi >= S.history.length - 1 ? 'disabled' : '') + ' title="Wiederholen (Strg+Y)" aria-label="Wiederholen">↪</button>' +
     '<button class="iconbtn" data-act="pop" data-arg="morePop" title="Mehr" aria-label="Mehr">•••</button>' +
@@ -928,7 +926,7 @@ function renderAddPop() {
 }
 function renderGuides() {
   const v = S.view;
-  const row = (k, l, sub) => '<div class="sw-row" data-act="view" data-arg="' + k + '"><span>' + l + (sub ? '<small>' + sub + '</small>' : '') + '</span><span class="toggle' + (v[k] ? ' on' : '') + '"></span></div>';
+  const row = (k, l, sub) => '<div class="sw-row" data-act="' + (k==='infoDims'?'toggleInfoDims':'view') + '"' + (k==='infoDims'?'':' data-arg="' + k + '"') + '><span>' + l + (sub ? '<small>' + sub + '</small>' : '') + '</span><span class="toggle' + (v[k] ? ' on' : '') + '"></span></div>';
   $('#guidesPop').innerHTML = '<h4>Hilfslinien</h4>' +
     row('grid', 'Raster') + row('measures', 'Raster-Maße', 'Koordinaten: X ab Mitte, Y ab vorderer Kante') + row('infoDims', 'Info-Bemaßung', 'Feine X-/Y-Maße an den Objekten') + row('ruler', 'Lineal A–G', 'Feste Linien aus den Einstellungen') + row('hsp', 'HSP-Lineal', 'Messlinie ab Hals-Schulter-Punkt') + '<button class="btn sm block" style="margin:6px 0" data-act="pop" data-arg="hspPop">HSP-Optionen direkt anpassen</button>' + row('cross', 'Fadenkreuz') + row('outerGuides','Außenlinien','Parallel zur aktuellen Plattenkante') +
     '<hr>' + row('lockLines', 'Alle Linien sperren', 'Schützt vor versehentlichem Verschieben') +
@@ -1365,6 +1363,18 @@ const ACT = {
     if (k === 'infoDims') toast(S.view.infoDims ? 'Info-Bemaßung eingeschaltet' : 'Info-Bemaßung ausgeschaltet');
     persist(); syncLive(true); renderDock(); renderCanvas(); renderTop(); renderGuides(); if ($('#settings').classList.contains('open')) renderSettings();
   },
+  toggleInfoDims() {
+    S.view.infoDims = !S.view.infoDims;
+    persist();
+    syncLive(true);
+    renderCanvas();
+    renderTop();
+    renderDock();
+    renderGuides();
+    if ($('#settings').classList.contains('open')) renderSettings();
+    if (S.view.infoDims && !(P().shapes||[]).length) toast('Info-Bemaßung EIN · zuerst ein Objekt hinzufügen');
+    else toast(S.view.infoDims ? 'Info-Bemaßung EIN' : 'Info-Bemaßung AUS');
+  },
   multi() { S.multi = !S.multi; renderDock(); toast(S.multi ? 'Mehrfachauswahl: Objekte nacheinander antippen' : 'Mehrfachauswahl aus'); },
   zoom(a) { a = +a; S.zoom = a === 0 ? 1 : clamp(r2(S.zoom + a * 0.25), 0.5, 4); renderDock(); renderCanvas(); },
   infopos(a) { P().info.pos = a; commit(); renderCanvas(); renderInsp(); },
@@ -1611,7 +1621,8 @@ function settingSection(id,title,sub,body,open){
   return '<details class="settings-section" data-settings-sec="'+id+'"'+(open?' open':'')+'><summary><div>'+title+(sub?'<small>'+sub+'</small>':'')+'</div></summary><div class="settings-body">'+body+'</div></details>';
 }
 function viewSetting(k,label,sub){
-  return '<button type="button" class="settings-toggle" data-act="view" data-arg="'+k+'"><span>'+label+(sub?'<small>'+sub+'</small>':'')+'</span><span class="toggle'+(S.view[k]?' on':'')+'"></span></button>';
+  const act=k==='infoDims'?'toggleInfoDims':'view';
+  return '<button type="button" class="settings-toggle" data-act="'+act+'"'+(k==='infoDims'?'':' data-arg="'+k+'"')+'><span>'+label+(sub?'<small>'+sub+'</small>':'')+'</span><span class="toggle'+(S.view[k]?' on':'')+'"></span></button>';
 }
 function renderSettings() {
   const t=LS.get('eps5-templates',{}), fonts=[['system-ui','System / San Francisco'],['Arial','Arial'],['Helvetica','Helvetica'],['Verdana','Verdana'],['Tahoma','Tahoma'],['Georgia','Georgia']];
