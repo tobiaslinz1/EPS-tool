@@ -337,7 +337,7 @@ const DEFAULT_SETUP = {
     ]
   },
   startTemplate: '',
-  calibration: { gridScale: 0.78, gridX: 0, gridY: 0, gridStep: 50, measureW: 40, measureH: 40 },
+  calibration: { gridScale: 0.78, gridScaleX: 0.78, gridScaleY: 0.78, gridX: 0, gridY: 0, gridStep: 50, measureW: 40, measureH: 40 },
   outerGuides: { extend: 3, width: 2, color: '#30d158', lines: [2,4] }
 };
 const DEFAULT_VIEW = { grid: true, measures: true, ruler: false, hsp: false, cross: false, outerGuides: false, infoDims: false, snap: true, lockLines: false };
@@ -719,11 +719,8 @@ function calibPlateSVG(su, pid, K, c) {
 function calibOverlaySVG(su, c, W, H, pids) {
   let s = '<svg class="bover" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">';
   if (c.step === 1) {
-    const G=su.calibration||{}, sc=clamp(+G.gridScale||.78,.2,1), gw=W*sc, gh=H*sc, cx=W/2+(+G.gridX||0), cy=H/2+(+G.gridY||0), x0=cx-gw/2,y0=cy-gh/2, st=Math.max(25,+G.gridStep||50);
-    s += '<rect x="'+x0+'" y="'+y0+'" width="'+gw+'" height="'+gh+'" fill="none" stroke="#fff" stroke-width="3"/>';
-    let gd=''; for(let x=cx;x<x0+gw;x+=st)gd+='M'+x+' '+y0+'V'+(y0+gh);for(let x=cx-st;x>x0;x-=st)gd+='M'+x+' '+y0+'V'+(y0+gh);for(let y=cy;y<y0+gh;y+=st)gd+='M'+x0+' '+y+'H'+(x0+gw);for(let y=cy-st;y>y0;y-=st)gd+='M'+x0+' '+y+'H'+(x0+gw);
-    s += '<path d="'+gd+'" stroke="rgba(255,255,255,.28)" stroke-width="1"/><line x1="'+x0+'" y1="'+cy+'" x2="'+(x0+gw)+'" y2="'+cy+'" stroke="#ff2d55" stroke-width="2"/><line x1="'+cx+'" y1="'+y0+'" x2="'+cx+'" y2="'+(y0+gh)+'" stroke="#64d2ff" stroke-width="2"/>';
-    s += '<circle cx="'+cx+'" cy="'+cy+'" r="8" fill="none" stroke="#ffd60a" stroke-width="2"/><text x="'+cx+'" y="'+(y0+gh+28)+'" fill="#fff" font-size="18" text-anchor="middle" font-weight="600">Montageraster · Beamer mechanisch gerade ausrichten</text>';
+    const G=su.calibration||{}, sx=clamp(+(G.gridScaleX??G.gridScale)||.78,.2,.98), sy=clamp(+(G.gridScaleY??G.gridScale)||.78,.2,.98), gw=W*sx, gh=H*sy, cx=W/2+(+G.gridX||0), cy=H/2+(+G.gridY||0), x0=cx-gw/2,y0=cy-gh/2;
+    s+='<rect x="'+x0+'" y="'+y0+'" width="'+gw+'" height="'+gh+'" fill="rgba(255,255,255,.015)" stroke="#fff" stroke-width="5"/><line x1="'+x0+'" y1="'+cy+'" x2="'+(x0+gw)+'" y2="'+cy+'" stroke="#ff2d55" stroke-width="2"/><line x1="'+cx+'" y1="'+y0+'" x2="'+cx+'" y2="'+(y0+gh)+'" stroke="#64d2ff" stroke-width="2"/><circle cx="'+cx+'" cy="'+cy+'" r="10" fill="none" stroke="#ffd60a" stroke-width="3"/><text x="'+cx+'" y="'+Math.min(H-12,y0+gh+28)+'" fill="#fff" font-size="18" text-anchor="middle" font-weight="700">PROJEKTIONSBEREICH · vollständig sichtbar einpassen</text>';
   } else if (c.step === 2) {
     const q=Math.max(5,+c.sq||40), kx=W/su.area.w, ky=H/su.area.h, qw=q*kx, qh=q*ky, x=(W-qw)/2, y=(H-qh)/2;
     s+='<rect x="'+x+'" y="'+y+'" width="'+qw+'" height="'+qh+'" fill="none" stroke="#ff9f0a" stroke-width="5"/><line x1="'+W/2+'" y1="'+(y-25)+'" x2="'+W/2+'" y2="'+(y+qh+25)+'" stroke="#64d2ff" stroke-width="2"/><line x1="'+(x-25)+'" y1="'+H/2+'" x2="'+(x+qw+25)+'" y2="'+H/2+'" stroke="#ff2d55" stroke-width="2"/><text x="'+W/2+'" y="'+(y+qh+34)+'" fill="#ff9f0a" font-size="22" text-anchor="middle" font-weight="700">MESSQUADRAT '+q+' × '+q+' cm</text>';
@@ -1343,8 +1340,16 @@ const ACT = {
     setup.area.w = r1(hgt / tr); setup.area.h = r1(setup.area.w * b / a);
     saveSetup(); syncLive(true); renderCalib(); toast('Projektionsfläche ≈ ' + fmt(setup.area.w) + ' × ' + fmt(setup.area.h) + ' cm');
   },
+  calFrameMove(a) {
+    const [dx,dy]=a.split(',').map(Number),g=setup.calibration;g.gridX=(+g.gridX||0)+dx;g.gridY=(+g.gridY||0)+dy;saveSetup();syncLive(true);renderCalib();
+  },
+  calFrameSize(a) {
+    const [dx,dy]=a.split(',').map(Number),g=setup.calibration;
+    g.gridScaleX=clamp(+(g.gridScaleX??g.gridScale||.78)+dx,.2,.98);g.gridScaleY=clamp(+(g.gridScaleY??g.gridScale||.78)+dy,.2,.98);
+    saveSetup();syncLive(true);renderCalib();
+  },
   calGlobalMeasure() {
-    const q=Math.max(5,+S.calib.sq||40), mw=+($('#mW')||{}).value, mh=+($('#mH')||{}).value;
+    const q=Math.max(5,+S.calib.sq||20), mw=+($('#mW')||{}).value, mh=+($('#mH')||{}).value;
     if(!(mw>0&&mh>0))return toast('Breite und Höhe des Messquadrats eingeben');
     setup.area.w=r2(setup.area.w*(mw/q)); setup.area.h=r2(setup.area.h*(mh/q));
     setup.plates.L.corners=null; setup.plates.R.corners=null;
@@ -1493,9 +1498,12 @@ function renderCalib() {
   const plateSeg=two?'<div class="seg" style="margin-bottom:14px"><button class="'+(c.plate==='L'?'on':'')+'" data-act="calPlate" data-arg="L">Platte links</button><button class="'+(c.plate==='R'?'on':'')+'" data-act="calPlate" data-arg="R">Platte rechts</button></div>':'';
   let h='';
   if(st===1){
-    h+='<div class="card"><h4>Beamer mechanisch ausrichten</h4><p class="hint">Das große Raster dient nur dazu, den Beamer gerade zur Maschine auszurichten. Die Zentimetergröße wird hier noch nicht festgelegt.</p><div class="fg">'+fld('Rastergröße (Faktor)','calibration.gridScale',0.01,0.2)+fld('Raster X (px)','calibration.gridX',1)+fld('Raster Y (px)','calibration.gridY',1)+fld('Rasterabstand (px)','calibration.gridStep',5,20)+'</div></div>';
+    h+='<div class="card"><h4>Projektionsbereich sichtbar einpassen</h4><p class="hint">Hier geht es noch nicht um Zentimeter. Passe den weißen Rahmen so an, dass er vollständig sichtbar ist und den gewünschten Arbeitsbereich abdeckt. Danach wird erst der Maßstab gemessen.</p>'+
+      '<div class="fg">'+fld('Breite des Rahmens','calibration.gridScaleX',0.01,0.2)+fld('Höhe des Rahmens','calibration.gridScaleY',0.01,0.2)+fld('Position X (px)','calibration.gridX',1)+fld('Position Y (px)','calibration.gridY',1)+'</div>'+
+      '<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap;margin-top:14px"><div><div class="lab">Rahmen verschieben</div><div class="pad"><span></span><button data-act="calFrameMove" data-arg="0,-10">↑</button><span></span><button data-act="calFrameMove" data-arg="-10,0">←</button><button data-act="calFrameMove" data-arg="0,10">↓</button><button data-act="calFrameMove" data-arg="10,0">→</button></div></div>'+
+      '<div><div class="lab">Größe</div><div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="calFrameSize" data-arg="-0.03,0">schmaler</button><button class="btn sm" data-act="calFrameSize" data-arg="0.03,0">breiter</button><button class="btn sm" data-act="calFrameSize" data-arg="0,-0.03">flacher</button><button class="btn sm" data-act="calFrameSize" data-arg="0,0.03">höher</button></div><div class="row" style="margin-top:8px"><button class="btn sm" data-act="calFrameSize" data-arg="-0.03,-0.03">insgesamt kleiner</button><button class="btn sm" data-act="calFrameSize" data-arg="0.03,0.03">insgesamt größer</button></div></div></div></div>';
   } else if(st===2){
-    const q=Math.max(5,+c.sq||40);
+    const q=Math.max(5,+c.sq||20);
     h+='<div class="card"><h4>Maßstab mit Messquadrat festlegen</h4><p class="hint">Jetzt wird unabhängig von den Platten ein Quadrat projiziert. Miss seine reale Breite und Höhe. Die Software korrigiert daraus X- und Y-Maßstab der gesamten Projektionsfläche.</p>'+
       '<div class="fg"><div class="f"><label>Sollgröße Messquadrat (cm)</label><input class="inp" type="number" min="5" step="1" data-cal="sq" value="'+q+'"></div><div class="f"><label>Real gemessene Breite (cm)</label><input class="inp" id="mW" type="number" min="1" step="0.1" placeholder="z. B. 49,6"></div><div class="f"><label>Real gemessene Höhe (cm)</label><input class="inp" id="mH" type="number" min="1" step="0.1" placeholder="z. B. 49,2"></div></div>'+
       '<div style="margin-top:14px"><button class="btn primary" data-act="calGlobalMeasure">Maßstab übernehmen</button></div><p class="hint" style="margin-top:12px">Danach wird dasselbe Quadrat erneut angezeigt. Es sollte dann real '+fmt(q)+' × '+fmt(q)+' cm messen.</p></div>'+
@@ -1794,7 +1802,7 @@ function initEditor() {
   S = {
     layout: normLayout(layout), view, plate: 'L', sel: [], tab: 'obj', step: 0.5, rotStep: 1, zoom: 1, K: 10,
     multi: false, open: {}, history: [], hi: -1, warned: false,
-    calib: { active: false, step: 1, plate: 'L', corner: 0, nudge: 5, roughStep: 0.5, sq: 10 },
+    calib: { active: false, step: 1, plate: 'L', corner: 0, nudge: 5, roughStep: 0.5, sq: 20 },
     beamerSize: LS.get('eps5-beamer-size', { w: 1920, h: 1080 })
   };
   try { bc = new BroadcastChannel('eps5'); } catch (e) { bc = null; }
