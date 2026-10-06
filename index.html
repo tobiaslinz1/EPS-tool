@@ -728,20 +728,27 @@ function calibOverlaySVG(su,c,W,H,pids){
   const key=su.twoPlates?(c.plate||'L'):'M', C=su.calibration||{}, all=C.centers||{}, cc=all[key]||{x:.5,y:.5};
   const cen={x:clamp(+cc.x||.5,0,1)*W,y:clamp(+cc.y||.5,0,1)*H};
   const cs=clamp(+C.crossStroke||1.5,.5,10), gs=clamp(+C.guideStroke||2,.5,10);
-  const cross=(col,label,arm)=>'<line x1="'+(cen.x-arm)+'" y1="'+cen.y+'" x2="'+(cen.x+arm)+'" y2="'+cen.y+'" stroke="'+col+'" stroke-width="'+cs+'"/><line x1="'+cen.x+'" y1="'+(cen.y-arm)+'" x2="'+cen.x+'" y2="'+(cen.y+arm)+'" stroke="'+col+'" stroke-width="'+cs+'"/><circle cx="'+cen.x+'" cy="'+cen.y+'" r="5" fill="#000" stroke="#fff" stroke-width="'+cs+'"/><text x="'+cen.x+'" y="'+(cen.y+arm+28)+'" fill="'+col+'" font-size="18" text-anchor="middle" font-weight="600">'+label+'</text>';
 
   if(c.step===1){
-    s+=cross('#64d2ff',su.twoPlates?(key==='L'?'POSITION LINKS':'POSITION RECHTS'):'POSITION MITTE',55);
+    s+='<line x1="'+(cen.x-55)+'" y1="'+cen.y+'" x2="'+(cen.x+55)+'" y2="'+cen.y+'" stroke="#64d2ff" stroke-width="'+cs+'"/><line x1="'+cen.x+'" y1="'+(cen.y-55)+'" x2="'+cen.x+'" y2="'+(cen.y+55)+'" stroke="#64d2ff" stroke-width="'+cs+'"/><circle cx="'+cen.x+'" cy="'+cen.y+'" r="5" fill="#000" stroke="#fff" stroke-width="'+cs+'"/>';
   } else if(c.step===2){
-    const gw=clamp(+C.guideW||520,120,W*.95), gh=clamp(+C.guideH||420,120,H*.95), x=cen.x-gw/2, y=cen.y-gh/2, arm=Math.max(30,Math.min(gw,gh)*.14);
+    const gw=clamp(+C.guideW||520,120,W*.96), gh=clamp(+C.guideH||420,120,H*.96), x=cen.x-gw/2, y=cen.y-gh/2;
     s+='<rect x="'+x+'" y="'+y+'" width="'+gw+'" height="'+gh+'" fill="rgba(255,159,10,.025)" stroke="#ff9f0a" stroke-width="'+gs+'"/>';
-    s+='<path d="M'+x+' '+y+'h22 M'+x+' '+y+'v22 M'+(x+gw)+' '+y+'h-22 M'+(x+gw)+' '+y+'v22 M'+x+' '+(y+gh)+'h22 M'+x+' '+(y+gh)+'v-22 M'+(x+gw)+' '+(y+gh)+'h-22 M'+(x+gw)+' '+(y+gh)+'v-22" stroke="#fff" stroke-width="'+Math.max(1,gs)+'" fill="none"/>';
-    s+=cross('#64d2ff','MITTELPUNKT',arm);
-    s+='<text x="'+cen.x+'" y="'+Math.max(24,y-14)+'" fill="#ff9f0a" font-size="17" text-anchor="middle" font-weight="700">RAHMEN '+Math.round(gw)+' × '+Math.round(gh)+' px</text>';
+    s+='<line x1="'+x+'" y1="'+cen.y+'" x2="'+(x+gw)+'" y2="'+cen.y+'" stroke="#64d2ff" stroke-width="'+cs+'"/>';
+    s+='<line x1="'+cen.x+'" y1="'+y+'" x2="'+cen.x+'" y2="'+(y+gh)+'" stroke="#64d2ff" stroke-width="'+cs+'"/>';
+    s+='<line x1="'+x+'" y1="'+y+'" x2="'+(x+gw)+'" y2="'+(y+gh)+'" stroke="rgba(255,255,255,.45)" stroke-width="'+Math.max(.5,cs*.7)+'"/>';
+    s+='<line x1="'+(x+gw)+'" y1="'+y+'" x2="'+x+'" y2="'+(y+gh)+'" stroke="rgba(255,255,255,.45)" stroke-width="'+Math.max(.5,cs*.7)+'"/>';
+    s+='<circle cx="'+cen.x+'" cy="'+cen.y+'" r="6" fill="#000" stroke="#fff" stroke-width="'+cs+'"/>';
+    s+='<rect x="'+(cen.x-92)+'" y="'+(cen.y-24)+'" width="184" height="48" rx="8" fill="rgba(0,0,0,.72)" stroke="rgba(255,255,255,.25)" stroke-width="1"/>';
+    s+='<text x="'+cen.x+'" y="'+(cen.y-3)+'" fill="#fff" font-size="18" text-anchor="middle" font-weight="700">'+Math.round(gw)+' × '+Math.round(gh)+' px</text>';
+    s+='<text x="'+cen.x+'" y="'+(cen.y+17)+'" fill="#ff9f0a" font-size="12" text-anchor="middle" font-weight="600">MITTELPUNKT</text>';
+    s+='<text x="'+cen.x+'" y="'+(y+22)+'" fill="#fff" font-size="13" text-anchor="middle">Breite '+Math.round(gw)+' px</text>';
+    s+='<text x="'+(x+10)+'" y="'+cen.y+'" fill="#fff" font-size="13" dominant-baseline="middle" transform="rotate(-90 '+(x+10)+' '+cen.y+')">Höhe '+Math.round(gh)+' px</text>';
   } else if(c.step===3){
     const q=clamp(+C.scalePx||360,120,Math.min(W,H)*.8), x=cen.x-q/2, y=cen.y-q/2;
     s+='<rect x="'+x+'" y="'+y+'" width="'+q+'" height="'+q+'" fill="none" stroke="#ff9f0a" stroke-width="'+gs+'"/>';
-    s+=cross('#64d2ff','GESPEICHERTER MITTELPUNKT',Math.max(28,q*.13));
+    s+='<line x1="'+x+'" y1="'+cen.y+'" x2="'+(x+q)+'" y2="'+cen.y+'" stroke="#64d2ff" stroke-width="'+cs+'"/><line x1="'+cen.x+'" y1="'+y+'" x2="'+cen.x+'" y2="'+(y+q)+'" stroke="#64d2ff" stroke-width="'+cs+'"/>';
+    s+='<circle cx="'+cen.x+'" cy="'+cen.y+'" r="5" fill="#000" stroke="#fff" stroke-width="'+cs+'"/>';
     s+='<text x="'+cen.x+'" y="'+(y+q+30)+'" fill="#ff9f0a" font-size="20" text-anchor="middle" font-weight="700">MESSQUADRAT · '+Math.round(q)+' px</text>';
   }
   return s+'</svg>';
@@ -1315,6 +1322,9 @@ const ACT = {
   calSquareSize(v){setup.calibration.scalePx=+v;saveSetup();syncLive(true);renderCalib();},
   calScaleSize(v){setup.calibration.scalePx=+v;saveSetup();syncLive(true);renderCalib();},
   calGuideSize(a){const [dw,dh]=String(a).split(',').map(Number),g=setup.calibration;g.guideW=clamp((+g.guideW||520)+dw,120,2000);g.guideH=clamp((+g.guideH||420)+dh,120,1400);saveSetup();syncLive(true);renderCalib();},
+  calGuideDim(a){const [k,d]=String(a).split(','),g=setup.calibration,n=+d||0;if(k==='w')g.guideW=clamp((+g.guideW||520)+n,120,2000);else g.guideH=clamp((+g.guideH||420)+n,120,1400);saveSetup();syncLive(true);renderCalib();},
+  calGuideStrokeSet(v){setup.calibration.guideStroke=clamp(+v||2,.5,10);saveSetup();syncLive(true);renderCalib();},
+  calCrossStrokeSet(v){setup.calibration.crossStroke=clamp(+v||1.5,.5,10);saveSetup();syncLive(true);renderCalib();},
   calCrossStroke(v){setup.calibration.crossStroke=clamp(+v||1.5,.5,10);saveSetup();syncLive(true);renderCalib();},
   calStrokePreset(a){const [gs,cs]=String(a).split(',').map(Number),g=setup.calibration;g.guideStroke=clamp(gs,.5,10);g.crossStroke=clamp(cs,.5,10);saveSetup();syncLive(true);renderCalib();},
   calAcceptCenter(){syncLive(true);toast('Mittelpunkt gespeichert');S.calib.step=3;syncLive(true);renderCalib();},
@@ -1538,21 +1548,15 @@ function renderCalib() {
 
   if(st===2){
     const gw=Math.round(+G.guideW||520), gh=Math.round(+G.guideH||420), gs=+G.guideStroke||2, cs=+G.crossStroke||1.5, ms=+G.moveStep||5;
-    h='<div class="card"><h4>2. Mittelpunkt und Rahmen</h4><p class="hint">Der orange Außenrahmen und das blaue Fadenkreuz sind eine reine Kalibrierhilfe. Das Kreuz bleibt immer exakt in der Mitte des Rahmens. Stelle zuerst Breite/Höhe grob ein und schiebe danach den ganzen Rahmen auf den realen Mittelpunkt.</p>'+pos+
-      '<div class="kv" style="margin-top:14px"><span>Aktueller Rahmen</span><b>'+gw+' × '+gh+' px</b></div>'+
-      '<div class="lab" style="margin-top:16px">Rahmengröße</div><div class="grid2">'+
-        '<div class="f"><label>Breite</label><input class="inp" id="calGuideW" type="number" min="120" max="2000" step="10" value="'+gw+'"></div>'+
-        '<div class="f"><label>Höhe</label><input class="inp" id="calGuideH" type="number" min="120" max="1400" step="10" value="'+gh+'"></div>'+
-      '</div>'+
-      '<div class="row" style="flex-wrap:wrap;margin-top:10px"><button class="btn sm" data-act="calGuideSize" data-arg="-50,0">Breite −50</button><button class="btn sm" data-act="calGuideSize" data-arg="-10,0">−10</button><button class="btn sm" data-act="calGuideSize" data-arg="10,0">+10</button><button class="btn sm" data-act="calGuideSize" data-arg="50,0">Breite +50</button></div>'+
-      '<div class="row" style="flex-wrap:wrap;margin-top:8px"><button class="btn sm" data-act="calGuideSize" data-arg="0,-50">Höhe −50</button><button class="btn sm" data-act="calGuideSize" data-arg="0,-10">−10</button><button class="btn sm" data-act="calGuideSize" data-arg="0,10">+10</button><button class="btn sm" data-act="calGuideSize" data-arg="0,50">Höhe +50</button></div>'+
-      '<div class="lab" style="margin-top:18px">Linienstärken</div><div class="grid2">'+
-        '<div class="f"><label>Rahmen</label><input class="inp" id="calGuideStroke" type="number" min="0.5" max="10" step="0.5" value="'+gs+'"></div>'+
-        '<div class="f"><label>Fadenkreuz</label><input class="inp" id="calCrossStroke" type="number" min="0.5" max="10" step="0.5" value="'+cs+'"></div>'+
-      '</div>'+
-      '<div class="row" style="flex-wrap:wrap;margin-top:10px"><button class="btn sm" data-act="calStrokePreset" data-arg="1,0.5">sehr fein</button><button class="btn sm" data-act="calStrokePreset" data-arg="1.5,1">fein</button><button class="btn sm" data-act="calStrokePreset" data-arg="2,1.5">normal</button><button class="btn sm" data-act="calStrokePreset" data-arg="3,2">kräftig</button></div>'+
+    h='<div class="card"><h4>2. Mittelpunkt und Rahmen</h4><p class="hint">Der orange Rahmen ist nur zum Ausrichten. Die blauen Mittellinien und die Diagonalen schneiden sich exakt im gespeicherten Mittelpunkt. Stelle zuerst Breite und Höhe grob ein und verschiebe danach den kompletten Rahmen auf deine reale Platte.</p>'+pos+
+      '<div class="kv" style="margin-top:14px"><span>Rahmen aktuell</span><b>'+gw+' × '+gh+' px</b></div>'+
+      '<div class="lab" style="margin-top:16px">Breite</div><div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="calGuideDim" data-arg="w,-100">−100</button><button class="btn sm" data-act="calGuideDim" data-arg="w,-25">−25</button><button class="btn sm" data-act="calGuideDim" data-arg="w,-5">−5</button><button class="btn sm" data-act="calGuideDim" data-arg="w,5">+5</button><button class="btn sm" data-act="calGuideDim" data-arg="w,25">+25</button><button class="btn sm" data-act="calGuideDim" data-arg="w,100">+100</button></div>'+
+      '<div class="lab" style="margin-top:12px">Höhe</div><div class="row" style="flex-wrap:wrap"><button class="btn sm" data-act="calGuideDim" data-arg="h,-100">−100</button><button class="btn sm" data-act="calGuideDim" data-arg="h,-25">−25</button><button class="btn sm" data-act="calGuideDim" data-arg="h,-5">−5</button><button class="btn sm" data-act="calGuideDim" data-arg="h,5">+5</button><button class="btn sm" data-act="calGuideDim" data-arg="h,25">+25</button><button class="btn sm" data-act="calGuideDim" data-arg="h,100">+100</button></div>'+
+      '<div class="grid2" style="margin-top:12px"><div class="f"><label>Breite direkt</label><input class="inp" id="calGuideW" type="number" min="120" max="2000" step="5" value="'+gw+'"></div><div class="f"><label>Höhe direkt</label><input class="inp" id="calGuideH" type="number" min="120" max="1400" step="5" value="'+gh+'"></div></div>'+
+      '<div class="lab" style="margin-top:18px">Linienstärke Außenrahmen</div><div class="seg">'+[0.5,1,1.5,2,3,4,5].map(v=>'<button class="'+(Math.abs(gs-v)<.01?'on':'')+'" data-act="calGuideStrokeSet" data-arg="'+v+'">'+String(v).replace('.',',')+'</button>').join('')+'</div>'+
+      '<div class="lab" style="margin-top:14px">Linienstärke Fadenkreuz</div><div class="seg">'+[0.5,1,1.5,2,3,4,5].map(v=>'<button class="'+(Math.abs(cs-v)<.01?'on':'')+'" data-act="calCrossStrokeSet" data-arg="'+v+'">'+String(v).replace('.',',')+'</button>').join('')+'</div>'+
       '<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">'+
-      '<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap"><div><div class="lab">Rahmen verschieben</div><div class="pad"><span></span><button data-act="calCenterNudge" data-arg="'+key+',0,-1">↑</button><span></span><button data-act="calCenterNudge" data-arg="'+key+',-1,0">←</button><button data-act="calCenterNudge" data-arg="'+key+',0,1">↓</button><button data-act="calCenterNudge" data-arg="'+key+',1,0">→</button></div></div>'+
+      '<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap"><div><div class="lab">Rahmen + Mittelpunkt verschieben</div><div class="pad"><span></span><button data-act="calCenterNudge" data-arg="'+key+',0,-1">↑</button><span></span><button data-act="calCenterNudge" data-arg="'+key+',-1,0">←</button><button data-act="calCenterNudge" data-arg="'+key+',0,1">↓</button><button data-act="calCenterNudge" data-arg="'+key+',1,0">→</button></div></div>'+
       '<div><div class="lab">Schrittweite</div><div class="seg">'+[1,5,20].map(v=>'<button class="'+(ms===v?'on':'')+'" data-act="calMoveStep" data-arg="'+v+'">'+v+' px</button>').join('')+'</div>'+
       '<div class="kv" style="margin-top:12px"><span>Mittelpunkt X</span><b>'+Math.round((+cc.x||.5)*bs.w)+' px</b></div><div class="kv"><span>Mittelpunkt Y</span><b>'+Math.round((+cc.y||.5)*bs.h)+' px</b></div>'+
       '<button class="btn sm block" style="margin-top:10px" data-act="calCenterReset">Position zurücksetzen</button></div></div>'+
