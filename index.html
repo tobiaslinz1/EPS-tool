@@ -1345,7 +1345,7 @@ const ACT = {
   },
   calFrameSize(a) {
     const [dx,dy]=a.split(',').map(Number),g=setup.calibration;
-    g.gridScaleX=clamp(+(g.gridScaleX??g.gridScale||.78)+dx,.2,.98);g.gridScaleY=clamp(+(g.gridScaleY??g.gridScale||.78)+dy,.2,.98);
+    g.gridScaleX=clamp(+((g.gridScaleX ?? g.gridScale) || .78)+dx,.2,.98);g.gridScaleY=clamp(+((g.gridScaleY ?? g.gridScale) || .78)+dy,.2,.98);
     saveSetup();syncLive(true);renderCalib();
   },
   calGlobalMeasure() {
